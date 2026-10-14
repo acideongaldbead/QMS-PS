@@ -1,0 +1,201 @@
+/* ==========================================================================
+   QMS 问题解决管理系统 · 设计令牌
+   --------------------------------------------------------------------------
+   ★★★ 换品牌配色只改本文件的「品牌色」与「语义色」两组变量 ★★★
+   当前为占位配色（专业中性 + 深青绿主色），待安世官方配色到位后整体替换。
+   ========================================================================== */
+
+:root {
+  /* ---------- 中性色阶 ---------- */
+  --n-0:   #FFFFFF;
+  --n-25:  #FBFCFD;
+  --n-50:  #F6F8FA;
+  --n-100: #EEF1F5;
+  --n-150: #E4E8EE;
+  --n-200: #D6DCE5;
+  --n-300: #BCC5D2;
+  --n-400: #98A4B5;
+  --n-500: #6E7C90;
+  --n-600: #515E70;
+  --n-700: #3B4757;
+  --n-800: #2A3441;
+  --n-900: #1A222C;
+  --n-950: #11171E;
+
+  /* ---------- 品牌色（占位，待替换）---------- */
+  --brand-50:  #E9F5F1;
+  --brand-100: #CBE7DF;
+  --brand-200: #9FD3C5;
+  --brand-300: #6BBBA6;
+  --brand-400: #389E86;
+  --brand-500: #0E7C66;   /* 主色 */
+  --brand-600: #0A6553;
+  --brand-700: #084F42;
+  --brand-800: #063A31;
+  --brand-900: #04251F;
+
+  /* ---------- 语义色 ---------- */
+  --c-primary:        var(--brand-500);
+  --c-primary-hover:  var(--brand-600);
+  --c-primary-active: var(--brand-700);
+  --c-primary-soft:   var(--brand-50);
+  --c-primary-border: var(--brand-200);
+  --c-on-primary:     #FFFFFF;
+
+  --c-success:        #16A34A;
+  --c-success-soft:   #E8F7EE;
+  --c-success-border: #A8DFBD;
+
+  --c-warning:        #D97706;
+  --c-warning-soft:   #FDF3E4;
+  --c-warning-border: #F3CE9A;
+
+  --c-danger:         #DC2626;
+  --c-danger-soft:    #FDECEC;
+  --c-danger-border:  #F1B4B4;
+
+  --c-info:           #2563EB;
+  --c-info-soft:      #EAF0FE;
+  --c-info-border:    #B7CBF8;
+
+  /* ---------- 文本 ---------- */
+  --t-1: var(--n-900);   /* 主要文本 / 标题 */
+  --t-2: var(--n-700);   /* 正文 */
+  --t-3: var(--n-500);   /* 次要说明 */
+  --t-4: var(--n-400);   /* 占位符 / 禁用 */
+  --t-link:      var(--c-primary);
+  --t-inverse:   #FFFFFF;
+
+  /* ---------- 背景与描边 ---------- */
+  --bg-app:      var(--n-50);
+  --bg-surface:  var(--n-0);
+  --bg-sunken:   var(--n-100);
+  --bg-hover:    var(--n-50);
+  --bg-selected: var(--brand-50);
+  --bg-nav:      var(--n-950);
+  --bg-mask:     rgba(17, 23, 30, .48);
+
+  --bd-1: var(--n-150);   /* 常规分隔线 */
+  --bd-2: var(--n-200);   /* 输入框描边 */
+  --bd-3: var(--n-300);   /* 强调描边 */
+  --bd-focus: var(--brand-400);
+
+  /* ---------- 8D 阶段状态 ---------- */
+  --stage-todo:      var(--n-300);
+  --stage-active:    var(--c-info);
+  --stage-done:      var(--c-success);
+  --stage-overdue:   var(--c-danger);
+  --stage-blocked:   var(--c-warning);
+  --stage-todo-bg:   var(--n-100);
+  --stage-active-bg: var(--c-info-soft);
+  --stage-done-bg:   var(--c-success-soft);
+  --stage-overdue-bg:var(--c-danger-soft);
+  --stage-blocked-bg:var(--c-warning-soft);
+
+  /* ---------- 字体 ---------- */
+  --font-sans: "Segoe UI", -apple-system, BlinkMacSystemFont, "PingFang SC",
+               "Microsoft YaHei", "Hiragino Sans GB", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-num:  "Segoe UI", Inter, Arial, sans-serif;
+  --font-mono: "Cascadia Mono", Consolas, "SF Mono", Menlo, monospace;
+
+  --fs-11: 11px;
+  --fs-12: 12px;
+  --fs-13: 13px;
+  --fs-14: 14px;
+  --fs-16: 16px;
+  --fs-18: 18px;
+  --fs-22: 22px;
+  --fs-28: 28px;
+
+  --lh-tight: 1.25;
+  --lh-base:  1.5;
+  --lh-loose: 1.7;
+
+  --fw-regular: 400;
+  --fw-medium:  500;
+  --fw-semi:    600;
+  --fw-bold:    700;
+
+  /* ---------- 间距 ---------- */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+  --sp-10: 40px;
+  --sp-12: 48px;
+
+  /* ---------- 圆角 ---------- */
+  --r-1: 2px;
+  --r-2: 4px;
+  --r-3: 6px;
+  --r-4: 8px;
+  --r-6: 12px;
+  --r-full: 999px;
+
+  /* ---------- 阴影 ---------- */
+  --sh-1: 0 1px 2px rgba(17, 23, 30, .06);
+  --sh-2: 0 2px 6px rgba(17, 23, 30, .08), 0 1px 2px rgba(17, 23, 30, .04);
+  --sh-3: 0 6px 16px rgba(17, 23, 30, .10), 0 2px 4px rgba(17, 23, 30, .05);
+  --sh-4: 0 16px 40px rgba(17, 23, 30, .16);
+  --sh-focus: 0 0 0 3px rgba(56, 158, 134, .28);
+
+  /* ---------- 层级 ---------- */
+  --z-base:    1;
+  --z-sticky:  100;
+  --z-topbar:  200;
+  --z-drawer:  300;
+  --z-modal:   400;
+  --z-toast:   500;
+  --z-tip:     600;
+
+  /* ---------- 动效 ---------- */
+  --ease: cubic-bezier(.2, .6, .3, 1);
+  --dur-fast: 120ms;
+  --dur-base: 180ms;
+  --dur-slow: 280ms;
+
+  /* ---------- 布局尺寸 ---------- */
+  --sidebar-w: 232px;
+  --sidebar-w-collapsed: 60px;
+  --topbar-h: 56px;
+  --subbar-h: 44px;
+  --content-max: 1600px;
+
+  /* ==========================================================================
+     密度令牌 —— 顶栏「舒适 / 紧凑」一键切换（html[data-density]）
+     舒适为默认：质量工程师需要长时间盯屏，13.5px 表格字号 + 12px 行距更耐看。
+     紧凑供熟练用户追求「一屏看更多行」。
+     ========================================================================== */
+  --d-fs-body: 14px;     /* 页面正文字号 */
+  --d-fs-table: 13.5px;  /* 表格正文字号 */
+  --d-fs-head: 12.5px;   /* 表头字号 */
+  --d-fs-md: 13.5px;     /* .fs-13 */
+  --d-fs-sm: 12.5px;     /* .fs-12 */
+  --d-fs-xs: 12px;       /* .fs-11 及各类提示文字 */
+  --d-td-py: 11px;       /* 表格单元格上下内边距 */
+  --d-th-py: 10px;       /* 表头上下内边距 */
+  --d-card-pad: 20px;    /* 卡片内边距 */
+  --d-form-gap: 16px;    /* 表单栅格行间距 */
+  --d-input-h: 36px;     /* 输入控件高度 */
+  --d-nav-py: 10px;      /* 左侧导航项上下内边距 */
+  --d-stage-py: 7px;     /* 8D 阶段条每格上下内边距 */
+}
+
+html[data-density="compact"] {
+  --d-fs-body: 13px;
+  --d-fs-table: 12.5px;
+  --d-fs-head: 12px;
+  --d-fs-md: 12.5px;
+  --d-fs-sm: 12px;
+  --d-fs-xs: 11px;
+  --d-td-py: 7px;
+  --d-th-py: 7px;
+  --d-card-pad: 14px;
+  --d-form-gap: 12px;
+  --d-input-h: 32px;
+  --d-nav-py: 7px;
+  --d-stage-py: 5px;
+}

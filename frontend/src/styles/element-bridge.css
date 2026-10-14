@@ -1,0 +1,105 @@
+/* ==========================================================================
+   Element Plus -> QMS design tokens
+   --------------------------------------------------------------------------
+   Maps Element Plus CSS variables onto the prototype's token set so the
+   rebuilt app keeps the exact same look. Load AFTER element-plus/dist/index.css
+   and AFTER tokens.css. Change brand colours in tokens.css only, never here.
+   ========================================================================== */
+
+:root {
+  /* ---- primary ---- */
+  --el-color-primary: var(--brand-500);
+  --el-color-primary-light-3: var(--brand-400);
+  --el-color-primary-light-5: var(--brand-300);
+  --el-color-primary-light-7: var(--brand-200);
+  --el-color-primary-light-8: var(--brand-100);
+  --el-color-primary-light-9: var(--brand-50);
+  --el-color-primary-dark-2: var(--brand-600);
+
+  /* ---- semantic ---- */
+  --el-color-success: var(--c-success);
+  --el-color-success-light-9: var(--c-success-soft);
+  --el-color-warning: var(--c-warning);
+  --el-color-warning-light-9: var(--c-warning-soft);
+  --el-color-danger: var(--c-danger);
+  --el-color-danger-light-9: var(--c-danger-soft);
+  --el-color-error: var(--c-danger);
+  --el-color-error-light-9: var(--c-danger-soft);
+  --el-color-info: var(--n-500);
+  --el-color-info-light-9: var(--n-100);
+
+  /* ---- text ---- */
+  --el-text-color-primary: var(--t-1);
+  --el-text-color-regular: var(--t-2);
+  --el-text-color-secondary: var(--t-3);
+  --el-text-color-placeholder: var(--t-4);
+  --el-text-color-disabled: var(--t-4);
+  --el-text-color-primary-color: var(--t-1);
+
+  /* ---- borders / fills ---- */
+  --el-border-color: var(--bd-2);
+  --el-border-color-light: var(--bd-1);
+  --el-border-color-lighter: var(--bd-1);
+  --el-border-color-extra-light: var(--n-100);
+  --el-border-color-dark: var(--bd-3);
+  --el-border-color-darker: var(--bd-3);
+  --el-fill-color: var(--bg-sunken);
+  --el-fill-color-light: var(--bg-hover);
+  --el-fill-color-lighter: var(--n-25);
+  --el-fill-color-blank: var(--bg-surface);
+  --el-bg-color: var(--bg-surface);
+  --el-bg-color-page: var(--bg-app);
+  --el-bg-color-overlay: var(--bg-surface);
+  --el-mask-color: var(--bg-mask);
+
+  /* ---- typography ---- */
+  --el-font-family: var(--font-sans);
+  --el-font-size-base: var(--d-fs-body);
+  --el-font-size-small: var(--d-fs-sm);
+  --el-font-size-extra-small: var(--d-fs-xs);
+  --el-font-size-medium: var(--fs-16);
+  --el-font-size-large: var(--fs-18);
+
+  /* ---- shape ---- */
+  --el-border-radius-base: var(--r-2);
+  --el-border-radius-small: var(--r-1);
+  --el-border-radius-round: var(--r-full);
+
+  /* ---- controls (follow the density switch) ---- */
+  --el-component-size: var(--d-input-h);
+  --el-component-size-small: calc(var(--d-input-h) - 4px);
+  --el-component-size-large: calc(var(--d-input-h) + 4px);
+
+  --el-box-shadow-light: var(--sh-1);
+  --el-box-shadow: var(--sh-2);
+  --el-box-shadow-lighter: var(--sh-1);
+  --el-box-shadow-dark: var(--sh-4);
+
+  --el-transition-duration: var(--dur-base);
+}
+
+/* Element's default table look fights our token-driven tables; keep the app's own. */
+.el-table th.el-table__cell {
+  background-color: var(--bg-sunken);
+  color: var(--t-3);
+  font-size: var(--d-fs-head);
+  font-weight: var(--fw-semi);
+}
+
+.el-table td.el-table__cell,
+.el-table th.el-table__cell {
+  padding-top: var(--d-td-py);
+  padding-bottom: var(--d-td-py);
+}
+
+.el-table {
+  font-size: var(--d-fs-table);
+  color: var(--t-2);
+}
+
+/* Compact mode shrinks Element controls along with everything else. */
+html[data-density='compact'] .el-button,
+html[data-density='compact'] .el-input__wrapper,
+html[data-density='compact'] .el-select__wrapper {
+  --el-component-size: var(--d-input-h);
+}

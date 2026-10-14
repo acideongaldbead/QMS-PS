@@ -1,0 +1,133 @@
+spring:
+  application:
+    name: qms-api
+  profiles:
+    active: local
+  datasource:
+    hikari:
+      # The schema is `qms`, but a pooled connection starts with the default
+      # search_path ("$user", public). Without this, every query would miss the
+      # tables, and the qms.next_document_no() helper would be unresolvable.
+      connection-init-sql: SET search_path TO qms, public
+  jackson:
+    time-zone: Asia/Shanghai
+    default-property-inclusion: non_null
+  servlet:
+    multipart:
+      # Deliberately a little above the 50MB business limit (qms.upload.max-bytes)
+      # so that limit is decided -- and audited -- by FileValidator. This value is
+      # only a coarse backstop against absurd bodies reaching the server at all.
+      max-file-size: 60MB
+      max-request-size: 200MB
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    schemas: qms
+    default-schema: qms
+    table: flyway_schema_history
+    validate-on-migrate: true
+  thymeleaf:
+    prefix: classpath:/template/mail/
+    suffix: .html
+
+server:
+  port: 8080
+  servlet:
+    encoding:
+      charset: UTF-8
+      force: true
+
+mybatis-plus:
+  mapper-locations: classpath*:mapper/**/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    banner: false
+    db-config:
+      logic-delete-field: isDeleted
+      logic-delete-value: true
+      logic-not-delete-value: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when-authorized
+      probes:
+        enabled: true
+  health:
+    # Email is an optional dependency: a relay that is down must not mark the
+    # whole application unhealthy. The DB indicator stays on.
+    mail:
+      enabled: false
+
+qms:
+  # Calendar days added to the start date to get the target date (requirement
+  # 3.1.2: 非常紧急 7 / 紧急 10 / 标准 14). Lives here rather than in the database
+  # because the schema stores priority names only -- note PRIORITY_003 is the most
+  # urgent.
+  priority:
+    target-days:
+      PRIORITY_003: 7
+      PRIORITY_002: 10
+      PRIORITY_001: 14
+    fallback-target-days: 14
+  jwt:
+    # Override in production. Must be at least 32 bytes for HS256.
+    secret: ${QMS_JWT_SECRET:local-dev-only-secret-change-me-in-production-0123456789}
+    access-token-minutes: 30
+    refresh-token-hours: 8
+  auth:
+    sso:
+      # Phase 1 uses local accounts. Phase 2 flips this to true and configures the provider.
+      enabled: false
+    lockout:
+      max-failed-attempts: 5
+      lock-minutes: 15
+  storage:
+    root: ${QMS_STORAGE_ROOT:./data/attachments}
+  upload:
+    max-bytes: 52428800
+    # Images, Office documents (Word / Excel / PowerPoint, legacy and OOXML),
+    # archives and video. Every extension must also appear in the accept list in
+    # FileValidator, which pins what the sniffed content type is allowed to be -
+    # adding one here alone would accept the upload and then fail the content gate.
+    allowed-extensions:
+      - jpg
+      - jpeg
+      - png
+      - pdf
+      - doc
+      - docx
+      - xls
+      - xlsx
+      - ppt
+      - pptx
+      - zip
+      - mp4
+  antivirus:
+    # noop | clamav
+    provider: noop
+    clamav:
+      host: 127.0.0.1
+      port: 3310
+      timeout-ms: 30000
+  mail:
+    # noop | smtp. noop records the send without a relay; smtp really sends and
+    # also needs spring.mail.* (host/username/password) set in config\.env.
+    provider: ${QMS_MAIL_PROVIDER:noop}
+    from-address: ${QMS_MAIL_FROM:qms-noreply@nexperia.com}
+  report:
+    # The 8D report PDF embeds this font, because PDF's built-in fonts cannot draw
+    # Chinese at all. Point it at a single .ttf; left empty, the Windows
+    # simplified-Chinese fonts are tried. A font that cannot be found fails loudly
+    # rather than producing a blank document.
+    pdf-font: ${QMS_REPORT_PDF_FONT:}
+  notification:
+    dispatcher:
+      enabled: true
+      fixed-delay-ms: 60000
+      max-retry: 5

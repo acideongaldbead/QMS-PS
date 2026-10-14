@@ -1,0 +1,59 @@
+{
+  "_comment": "seed-demo-ledger.ps1 的文案素材（中文）。脚本本身是纯 ASCII，中文只出现在这里。文案口径取自已验收的原型 docs/reference/mock-data.js 的 FAILURE_TEXT。",
+  "symptoms": [
+    "客户在来料检验时发现器件塑封体顶面出现崩边，长度约 0.3-0.5 mm，肉眼可见。",
+    "可靠性测试后出现漏电超标，开封分析显示键合球与焊盘脱离。",
+    "温度循环测试后出现开路失效，开封可见键合线颈部断裂。",
+    "客户整机测试中出现参数漂移，X-Ray 与断面分析发现芯片裂纹。",
+    "客户回流焊后 X-Ray 检查发现焊点空洞率超标，超出客户接受标准。",
+    "产线 AOI 检出引脚变形，无法正常贴装。",
+    "整机 ESD 测试后器件失效，实测呈短路状态。",
+    "客户返修时发现器件表面存在异常附着物。"
+  ],
+  "conclusions": [
+    "Package chipping confirmed on returned samples. Mechanical stress during handling or transport suspected.",
+    "Lifted ball bond confirmed by decapsulation. Bond pad contamination traced to upstream cleaning process.",
+    "Wire bond neck break confirmed. Capillary wear exceeded the replacement limit.",
+    "Die crack confirmed, originating from backside grinding damage.",
+    "Excessive solder void confirmed. Void rate above the customer limit of 15%.",
+    "Lead deformation confirmed. Caused by tray handling during final packing.",
+    "ESD damage confirmed at pin 3. ESD protection diode junction burned.",
+    "Foreign material identified as flux residue by EDS analysis; origin under evaluation."
+  ],
+  "rootCauses": [
+    "换模后模温漂移，换型参数未重新验证。",
+    "上游清洗工序残留物导致焊盘污染。",
+    "劈刀磨损超过更换限值，键合参数未随刀具寿命调整。",
+    "背面研磨工艺参数超差，造成芯片背侧损伤。",
+    "回流焊曲线设定与客户制程不匹配，空洞率超标。",
+    "成品托盘在搬运过程中挤压引脚，导致变形。"
+  ],
+  "containmentActions": [
+    "在客户现场隔离并全检可疑库存，换货处理。",
+    "暂停出货同批次产品，冻结在制品。",
+    "通知客户暂停使用该批次，安排现场复检。",
+    "对本厂在制品追加一次外观全检。",
+    "启动与客户的质量沟通，确认影响范围。",
+    "封存同刀具加工的批次，待分析结论。"
+  ],
+  "correctiveActions": [
+    "在换型检查表中增加模温复位与验证步骤。",
+    "把残留物检测纳入清洗工序的日常点检项。",
+    "增加刀具寿命与键合参数的联动校验。",
+    "更新背面研磨工艺参数并做首件确认。",
+    "按客户制程重做回流曲线并纳入控制计划。",
+    "修订托盘搬运作业指导书并培训操作员。"
+  ],
+  "risks": [
+    "中等：仅影响单一模腔，遏制措施已生效。",
+    "较高：涉及同批次全部出货，已全检覆盖。",
+    "较低：属于过程参数偏差，已确认无扩散。"
+  ],
+  "failureChains": [
+    [ "2", "2c", "2ca" ],
+    [ "2", "2a", "2aa" ],
+    [ "3", "3a", "3aa" ],
+    [ "4", "4a", "4aa" ],
+    [ "5", "5b", "5ba" ]
+  ]
+}

@@ -1,0 +1,101 @@
+{
+  "_comment": "Expected message fragments, kept in a UTF-8 JSON file on purpose: a .ps1 without a BOM is decoded as GBK by PowerShell 5.1, so Chinese literals inside the script turn to mojibake and never match. Scripts stay pure ASCII and read their Chinese from here.",
+  "complaint": {
+    "contactNotOfCustomer": "联系人不属于",
+    "brokenChain": "不属于所选一级",
+    "unknownDictionary": "主数据编码不存在或已停用"
+  },
+  "masterdata": {},
+  "attachment": {
+    "unsupportedType": "不支持的文件类型",
+    "overSize": "上限",
+    "executable": "可执行程序",
+    "contentMismatch": "与扩展名",
+    "macroRefused": "VBA 宏",
+    "uploaderName": "马晓然"
+  },
+  "antivirus": {
+    "scanFailed": "安全扫描",
+    "unavailable": "杀毒服务不可用"
+  },
+  "logistics": {
+    "sampleNotOfComplaint": "样品不属于该投诉单",
+    "alreadyInShipment": "样品已在该批次中",
+    "duplicateSample": "样品重复出现",
+    "sampleLinkedRefusal": "已被",
+    "invalidStatus": "物流状态无效",
+    "statusPreparing": "备货中"
+  },
+  "verification": {
+    "invalidTaskStatus": "任务状态无效",
+    "complaintClosed": "已结案",
+    "alreadyDecided": "有效性已判定",
+    "taskClosedForEntry": "不能继续录入结果",
+    "noResults": "请至少录入一条验证结果",
+    "closeReasonInvalid": "投诉不成立",
+    "scheduleWarning": "晚于投诉目标日期",
+    "taskStatusScheduled": "已排期",
+    "recorderName": "李思远",
+    "brokenChain": "不属于所选一级"
+  },
+  "containment": {
+    "invalidStatus": "遏制措施状态无效",
+    "noteRequired": "必须填写理由",
+    "actionsExist": "已登记遏制措施",
+    "alreadySkipped": "已判定为",
+    "complaintClosed": "已结案",
+    "statusTodo": "待处理",
+    "ownerName": "赵敏"
+  },
+  "rootcause": {
+    "invalidStatus": "根因状态无效",
+    "invalidOrg": "责任组织不存在或已停用",
+    "invalidType": "分析类型只能是",
+    "complaintClosed": "已结案",
+    "transferTarget": "王振宇",
+    "orgInternal": "内部"
+  },
+  "actions": {
+    "invalidActionStatus": "纠正措施状态无效",
+    "invalidPreventionStatus": "预防文件状态无效",
+    "rootCauseMissing": "根因不存在",
+    "rootCauseOtherComplaint": "根因不属于该投诉单",
+    "invalidFileType": "文件类型不存在或已停用",
+    "complaintClosed": "已结案",
+    "statusVerified": "已验证",
+    "statusFailed": "验证不通过",
+    "statusDone": "已实施",
+    "fileTypeFmea": "FMEA",
+    "ownerName": "赵敏"
+  },
+  "report": {
+    "preconditionPrevention": "预防文件尚未更新完成",
+    "typeInterim": "中期报告",
+    "approvalRequired": "需先提交审批并获得批准",
+    "approverName": "张宏",
+    "rejectionNeedsComment": "驳回时必须填写审批意见"
+  },
+  "log": {
+    "registrationLabel": "投诉单 · 新增",
+    "actorName": "马晓然"
+  },
+  "knowledge": {
+    "categoryProcess": "流程文件",
+    "categoryTemplate": "分析模板",
+    "categoryTraining": "培训教材",
+    "categoryManual": "操作手册",
+    "duplicateDocCode": "文档编号已存在",
+    "unknownCategory": "文档分类不存在",
+    "titleRequired": "标题不能为空",
+    "notFound": "知识文档不存在",
+    "unsupportedType": "不支持的文件类型",
+    "maintainerName": "周颖",
+    "docTitle": "客诉处理程序（验收）",
+    "docTitleEn": "Complaint Handling Procedure",
+    "docTitle2": "8D 培训教材（验收）",
+    "docTitle2En": "8D Training Material",
+    "docTitleEdited": "客诉处理程序（验收·已修订）",
+    "docSummary": "验收用描述：流程文件的说明",
+    "docSummary2": "验收用描述：培训教材的说明"
+  }
+}

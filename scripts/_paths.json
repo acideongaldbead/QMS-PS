@@ -1,0 +1,17 @@
+{
+  "root": "C:\\Users\\Vivien.ma\\Documents\\Vivien\\ps\\qms-app",
+  "toolsDir": "C:\\Users\\Vivien.ma\\Documents\\Vivien\\ps\\qms-app\\tools",
+  "outDir": "C:\\Users\\Vivien.ma\\Documents\\Vivien\\ps\\qms-app\\tools\\_out",
+  "pgBin": "C:\\Program Files\\PostgreSQL\\18\\bin",
+  "deliverableDdl": "C:\\Users\\Vivien.ma\\Documents\\Vivien\\ps\\QMS-问题解决管理系统-PostgreSQL-DDL.sql",
+  "baselineOut": "C:\\Users\\Vivien.ma\\Documents\\Vivien\\ps\\qms-app\\db\\migration\\V1__baseline.sql",
+  "prototypeDir": "C:\\Users\\Vivien.ma\\Documents\\Vivien\\ps\\qms_prototype",
+  "downloads": {
+    "jdkUrl": "https://api.adoptium.net/v3/binary/latest/21/ga/windows/x64/jdk/hotspot/normal/eclipse",
+    "mavenUrl": "https://archive.apache.org/dist/maven/maven-3/3.9.9/binaries/apache-maven-3.9.9-bin.zip",
+    "gitUrls": [
+      "https://github.com/git-for-windows/git/releases/download/v2.47.1.windows.1/PortableGit-2.47.1-64-bit.7z.exe",
+      "https://github.com/git-for-windows/git/releases/download/v2.46.2.windows.1/PortableGit-2.46.2-64-bit.7z.exe"
+    ]
+  }
+}

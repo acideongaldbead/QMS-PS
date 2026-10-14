@@ -1,0 +1,31 @@
+spring:
+  datasource:
+    url: ${QMS_DB_URL:jdbc:postgresql://localhost:5433/qms}
+    username: ${QMS_DB_USER:qms}
+    password: ${QMS_DB_PASSWORD:qms}
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 10000
+  mail:
+    host: ${QMS_SMTP_HOST:localhost}
+    port: ${QMS_SMTP_PORT:1025}
+    username: ${QMS_SMTP_USER:}
+    password: ${QMS_SMTP_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
+
+logging:
+  level:
+    com.nexperia.qms: DEBUG
+    org.springframework.security: INFO
+
+qms:
+  auth:
+    # Seeds the dummy accounts so the demo is usable. Absent in production, where
+    # an administrator sets real passwords instead.
+    dev-password: ${QMS_DEV_PASSWORD:Qms@2026}

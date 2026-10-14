@@ -1,0 +1,43 @@
+# --- build output ---
+target/
+dist/
+build/
+*.jar
+*.war
+!.mvn/wrapper/maven-wrapper.jar
+
+# --- node ---
+node_modules/
+.vite/
+*.tsbuildinfo
+npm-debug.log*
+
+# --- local toolchain & downloads (never commit) ---
+tools/
+config/.env
+config/application-prod.yml
+
+# --- runtime data ---
+data/
+logs/
+run/
+*.log
+*.pid
+
+# --- IDE ---
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.classpath
+.project
+.settings/
+
+# --- OS ---
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# --- keep these ---
+!config/.env.example
