@@ -26,6 +26,11 @@
 
 ```
 qms-app/
+  .git/ .gitignore  **本地 git 仓库（2026-10-14 建立，分支 main）**。仓库级 `core.autocrlf=false`：
+                工作树是混用的行尾（SQL 为 CRLF、Java/TS/PS1 为 LF），而
+                `db/migration/V1__baseline.sql` 要与交付 DDL **逐字节一致**，任何行尾转换都会破坏该比对。
+                **不要改成 true，也不要加会做行尾归一化的 .gitattributes。**
+                `config/.env`（含口令）、`tools/`、`data/`、`logs/`、`run/`、构建产物一律不入库。
   backend/        Spring Boot 模块（下文 §3）
   frontend/       Vite+Vue3 前端（下文 §4）
   db/migration/   Flyway 迁移 V1..V20（下文 §5）
