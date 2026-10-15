@@ -51,6 +51,12 @@ const routes: RouteRecordRaw[] = [
         meta: { permission: 'knowledge:view' }
       },
       {
+        path: 'announcements/manage',
+        name: 'announcementManage',
+        component: () => import('@/views/AnnouncementManageView.vue'),
+        meta: { permission: 'announcement:manage', nav: 'announcement' }
+      },
+      {
         path: 'admin',
         name: 'admin',
         component: () => import('@/views/AdminView.vue'),

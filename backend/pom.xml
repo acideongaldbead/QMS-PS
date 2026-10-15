@@ -23,6 +23,7 @@
         <poi-tl.version>1.12.2</poi-tl.version>
         <pdfbox.version>3.0.3</pdfbox.version>
         <tika.version>2.9.2</tika.version>
+        <jsoup.version>1.18.3</jsoup.version>
         <jjwt.version>0.12.6</jjwt.version>
     </properties>
 
@@ -114,6 +115,18 @@
             <groupId>org.apache.tika</groupId>
             <artifactId>tika-core</artifactId>
             <version>${tika.version}</version>
+        </dependency>
+
+        <!--
+          Rich-text sanitising: an announcement body arrives as HTML and is stored
+          as HTML, so it is whitelist-filtered on the way in (see HtmlSanitizer).
+          tika-core does not pull jsoup in, and the Spring Boot parent BOM does not
+          manage its version either, so it is pinned here like every other dep.
+        -->
+        <dependency>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+            <version>${jsoup.version}</version>
         </dependency>
 
         <dependency>

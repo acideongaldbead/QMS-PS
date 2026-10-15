@@ -114,6 +114,11 @@ try {
     loginAssets.filter((n) => /mermaid|MindElixir/i.test(n)).join(', ')
   )
   console.log(`         login fetched ${loginAssets.length} assets, ${kb(bytesSince(mark))}`)
+  note(
+    'the login page pulls no rich-text editor',
+    !matchesAny(loginAssets, /tiptap|prosemirror/i),
+    loginAssets.filter((n) => /tiptap|prosemirror/i.test(n)).join(', ')
+  )
 
   // --- stage 2: the complaint detail page ----------------------------------
   mark = assets.length

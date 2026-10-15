@@ -28,6 +28,7 @@ const NAV: NavItem[] = [
   { key: 'new', icon: 'plus', to: '/complaints/new', permission: 'complaint:create' },
   { key: 'reports', icon: 'chart', to: '/reports' },
   { key: 'kb', icon: 'book', to: '/kb' },
+  { key: 'announcement', icon: 'bell', to: '/announcements/manage', permission: 'announcement:manage' },
   { key: 'admin', icon: 'settings', to: '/admin', permission: 'admin.all' }
 ]
 

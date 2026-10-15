@@ -285,7 +285,9 @@ onMounted(load)
         {{ formatDateTime(activeAnnouncement?.publishedAt) }} · 发布人
         {{ activeAnnouncement?.publishedByName || '—' }}
       </div>
-      <div class="fs-13 ann-body">{{ activeAnnouncement?.content }}</div>
+      <!-- The body is sanitised HTML on the server (see HtmlSanitizer), so it is
+           rendered rather than escaped. -->
+      <div class="fs-13 ann-body" v-html="activeAnnouncement?.content"></div>
     </el-drawer>
   </div>
 </template>
@@ -349,10 +351,56 @@ onMounted(load)
   border-top: 1px solid var(--bd-1);
 }
 
+/*
+  The announcement body is sanitised HTML (v-html), so its block elements arrive
+  from the server rather than from this component -- white-space:pre-wrap would
+  then double every newline between tags. Scoped styles do not reach v-html
+  children, hence :deep().
+*/
 .ann-body {
   line-height: 1.85;
-  white-space: pre-wrap;
   color: var(--t-2);
+}
+
+.ann-body :deep(p) {
+  margin: 0 0 var(--sp-2);
+}
+
+.ann-body :deep(p:last-child) {
+  margin-bottom: 0;
+}
+
+.ann-body :deep(ul) {
+  list-style: disc;
+  padding-left: var(--sp-5);
+  margin: 0 0 var(--sp-2);
+}
+
+.ann-body :deep(ol) {
+  list-style: decimal;
+  padding-left: var(--sp-5);
+  margin: 0 0 var(--sp-2);
+}
+
+.ann-body :deep(blockquote) {
+  border-left: 3px solid var(--bd-2);
+  padding-left: var(--sp-3);
+  color: var(--t-3);
+  margin: 0 0 var(--sp-2);
+}
+
+.ann-body :deep(h1),
+.ann-body :deep(h2),
+.ann-body :deep(h3),
+.ann-body :deep(h4) {
+  margin: var(--sp-3) 0 var(--sp-2);
+  font-weight: var(--fw-semi);
+  color: var(--t-1);
+}
+
+.ann-body :deep(a) {
+  color: var(--c-primary);
+  text-decoration: underline;
 }
 
 /* NEW badge on an unread announcement; disappears once it has been opened. */

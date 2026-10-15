@@ -215,6 +215,7 @@ $publishedCount = @($published).Count
 Check 'published announcements are returned' ($publishedCount -gt 0) ('count=' + $publishedCount)
 Check 'an announcement carries its title' (-not [string]::IsNullOrWhiteSpace($published[0].title)) 'no title'
 Check 'an announcement carries its body' (-not [string]::IsNullOrWhiteSpace($published[0].content)) 'no body'
+Check 'every published body is stored as HTML' ((@($published | Where-Object { $_.content -notlike '<*' }).Count) -eq 0) 'a plain-text body survived'
 Check 'an announcement names its publisher' (-not [string]::IsNullOrWhiteSpace($published[0].publishedByName)) 'no publisher'
 $times = @($published | ForEach-Object { $_.publishedAt })
 $timeOrdered = $true

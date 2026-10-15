@@ -97,5 +97,16 @@
     "docTitleEdited": "客诉处理程序（验收·已修订）",
     "docSummary": "验收用描述：流程文件的说明",
     "docSummary2": "验收用描述：培训教材的说明"
+  },
+  "announcement": {
+    "publisherName": "周颖",
+    "statusDraft": "草稿",
+    "statusPublished": "已发布",
+    "statusRetired": "已下架",
+    "titleRequired": "标题不能为空",
+    "contentRequired": "内容不能为空",
+    "notFound": "公告不存在",
+    "publishRefused": "公告已是发布状态",
+    "retireRefused": "只有已发布的公告可以下架"
   }
 }

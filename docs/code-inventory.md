@@ -15,7 +15,7 @@
 | 前端 | Vite 6 + Vue 3.5 + TypeScript + Element Plus + Pinia + vue-i18n |
 | 数据库 | PostgreSQL 18（本机监听 **5433**），schema `qms`，口令在 `config\.env` |
 | 部署形态 | **单端口单进程**：`frontend/dist` 由 pom 打进 jar 的 `static/`，一个 jar 同时提供界面与接口（无 nginx、无 CORS） |
-| 关键依赖（已在 pom） | `poi-tl`（Word）、`spring-boot-starter-mail`（D8 邮件）、`tika-core`（附件内容嗅探）、`mybatis-plus`、`flyway` |
+| 关键依赖（已在 pom） | `poi-tl`（Word）、`spring-boot-starter-mail`（D8 邮件）、`tika-core`（附件内容嗅探）、**`jsoup`（公告正文富文本净化）**、`mybatis-plus`、`flyway` |
 | 构建链路 | `frontend-build.ps1` → `backend-build.ps1` → `qms-server.ps1 -Action Start` |
 
 > 约定：**迁移只追加**（V1 基线冻结）；**脚本必须落盘为 `.ps1` 再调用**；`.ps1` 保持**纯 ASCII**（中文走 `_verify_expectations.json`）；验收每阶段都要「可复跑断言 + 真机截图」。
@@ -56,6 +56,7 @@ qms-app/
 | `common.audit` | `AuditLog` `AuditActions` `AuditLogService` | 审计写入；`record/recordValueChange/recordRegardlessOfOutcome`；`AuditActions` 含 CREATE/UPDATE/DELETE/STATUS_CHANGE/**EXPORT/SEND/APPROVE/REJECT** |
 | `common.numbering` | `DocumentNumberService` `SequenceMapper` | 单据号：`nextComplaintId`(C…)、`nextReportId`(**R…**)、`nextApprovalId`(AP…) 等 |
 | `common.storage` | `StorageService` `LocalFsStorage` `AntivirusScanner`+`Noop`/`ClamAv` `UploadProperties` `FileValidator` | 附件存储 + **可插拔杀毒**（默认 Noop，`qms.antivirus.provider=clamav` 启用） |
+| `common.richtext` (**公告管理新增**) | `HtmlSanitizer` | 富文本白名单净化（jsoup `Safelist`）：公告正文写入前过滤，去 `<script>`/事件属性/`javascript:` 链接；文本格式白名单（p/br/strong/b/em/i/u/h1–h4/ul/ol/li/blockquote/a[href]）。`prettyPrint(false)` 保证存盘字节可往返 |
 | `common.exception` | `NotFoundException` `GlobalExceptionHandler` `DataIntegrityTranslator` | 异常→HTTP：NotFound 404 / IllegalArgument 400 / **IllegalState 409** / 其余 500 |
 | `auth` | `AuthController` `AuthService` `AuthProvider`+`LocalPassword`/`OAuth2` `AuthMapper` | 登录/JWT/锁定；SSO 留空实现 |
 | `masterdata` | `MasterDataController` `MasterDataService` | `/api/master-data/*`：字典、失效类型树、客户/发货方/联系人、产品、人员、状态码、角色/权限 |
@@ -69,7 +70,7 @@ qms-app/
 | `complaintlog` (**遗留清理新建**) | `ComplaintLogController` `ComplaintLogService` `ComplaintLogMapper` + `dto/ComplaintLogDtos` | `GET /api/complaints/{id}/logs`：流程轨迹（`audit_log` 按 `biz_id=投诉号` 跨 biz_type 取）+ 沟通日志（`report_distribution`）合并成一条时间轴，动作/业务码在此翻成中文 |
 | `attachment` | `AttachmentController` `AttachmentService` `Attachment` `AttachmentBizType` `FileValidator` + Mapper | 多态附件（`biz_type + biz_id`），含 `Complaint`/`Sample`/`Shipment`/`VerificationTask`/`ContainmentAction`/`RootCause`/`CorrectiveAction`/`PreventionFileUpdate`/`Report8D`。**三道门**：扩展名白名单（`qms.upload.allowed-extensions`，含 Office 全格式）→ Tika 内容类型必须与扩展名匹配 → **OOXML 包内不得有 `vbaProject.bin`**（宏文档拒收） |
 | `home` (**2.10 新建**) | `HomeController` `HomeService` `HomeMapper` + `dto/HomeDtos` | `GET /api/home/overview` 一次给全首页：4 个指标 + 待办（按阶段表聚合，读 `status_code.is_final` 判「未完成」，D6 用 `CORR_DONE` 特判）+ 超期横幅（**复用** `ComplaintService.listLedger`）。`countRelatedToMe()` 与台账 `mineTotal` 同一谓词 |
-| `announcement` (**2.10 新建**) | `AnnouncementController` `AnnouncementService` `AnnouncementMapper` + `dto/AnnouncementDtos` | `GET /api/announcements?limit=` 只返 `publish_status='已发布'`，按 `published_at` 倒序，join `employee` 取发布人 |
+| `announcement` | `AnnouncementController` `AnnouncementService` `Announcement` `AnnouncementMapper` + `dto/AnnouncementDtos` | 公告：**读** `GET /api/announcements?limit=`（只返 `publish_status='已发布'`、`published_at` 倒序、join `employee` 取发布人）+ `POST /{id}/read`（按人已读，NEW 徽标）；**管理**（2.13/公告管理，`announcement:manage`）：`GET/POST /manage`、`GET/PUT /manage/{id}`、`POST /manage/{id}/publish\|retire`、`DELETE /manage/{id}`。正文是**净化后的 HTML**（见 `common.richtext.HtmlSanitizer`），首页抽屉 `v-html` 渲染 |
 | `knowledge` (**2.12 新建**) | `KnowledgeController` `KnowledgeService` `KnowledgeArticle` `KnowledgeMapper` + `dto/KnowledgeDtos` | 知识中心（需求 3.11）：`GET /api/knowledge/articles?category=&keyword=` / `GET /api/knowledge/summary` / 单条 GET / POST / PUT / DELETE。列表用 `LEFT JOIN LATERAL` 取**最新附件**（`attachment_id` + 文件名/大小/类型），每行因此能直接显示与下载文件。读 `knowledge:view`、写 `knowledge:manage`。文档文件走通用附件表（`biz_type='KnowledgeArticle'`，`biz_id` = `article_id`） |
 
 **报告模块要点**：`qms.mail.provider` = `noop`（默认，写沟通日志不真发）/ `smtp`（配 `SPRING_MAIL_*` 即真发）；Word 由 POI **代码生成**（仓库无 `XTE-0071.docx`）。
@@ -78,7 +79,7 @@ qms-app/
 
 ## 4. 前端清单 `frontend/src/`
 
-**路由**（`router/index.ts`，hash 模式）：`/login`、`/`(HomeView 工作台)、`/complaints`(LedgerView 台账)、`/complaints/new`、`/complaints/:id`(详情)、`.../report/:reportId`(报告)、`.../report/:reportId/send`(发送，`report:send`)、`/reports`、`/kb`(知识中心，`knowledge:view`)、`/admin`(`admin.all`)。`meta.permission` 由 `beforeEach` 强制。**（原 `.../root-cause/:rcId/why` 死路由已于 2.12 删除：3x5Why 与鱼骨图在 D4 页签里。）**
+**路由**（`router/index.ts`，hash 模式）：`/login`、`/`(HomeView 工作台)、`/complaints`(LedgerView 台账)、`/complaints/new`、`/complaints/:id`(详情)、`.../report/:reportId`(报告)、`.../report/:reportId/send`(发送，`report:send`)、`/reports`、`/kb`(知识中心，`knowledge:view`)、`/announcements/manage`(公告管理，`announcement:manage`)、`/admin`(`admin.all`)。`meta.permission` 由 `beforeEach` 强制。**（原 `.../root-cause/:rcId/why` 死路由已于 2.12 删除：3x5Why 与鱼骨图在 D4 页签里。）**
 
 | 目录 | 文件 | 状态 |
 |---|---|---|
@@ -89,10 +90,11 @@ qms-app/
 | | `ComplaintDetailView` | 完成（阶段条 + 11 个页签全部接线；**支持 `?tab=` 定位**，首页待办一键跳转到对应阶段） |
 | | `Report8DView` `ReportSendView` | 完成（D8） |
 | | `KnowledgeView` | **完成（2.12）**——左文档库（按分类分组）+ 右分类筛选（带计数）与维护规则；关键词检索（走服务端）、下载、PDF/图片在线预览；管理员可新建/编辑/软删并上传文档附件。页内把 `.grid-sidebar` 覆盖为「窄右栏」以免筛选栏在 1280 以下被拍成单列 |
+| | `AnnouncementManageView` | **完成（公告管理）**——公告列表（状态筛选 全部/草稿/已发布/已下架）+ 新建/编辑对话框（标题、发布时间、**TipTap 富文本正文**）+ 发布/下架/删除；仅 `announcement:manage` 可见，路由同权限门控 |
 | | `ReportsView` | **占位**（2.11 未开始） |
 | `views/complaint-detail/` | `StageBar` `SamplePanel` `ShipmentPanel` `VerificationPanel`(D2) `ContainmentPanel`(D3) `RootCausePanel`(D4) `WhyMindMap` `FishboneEditor` `CorrectiveActionPanel`(D5) `ActionVerificationPanel`(D6) `PreventionPanel`(D7) `ReportPanel`(D8，含提交审批/审批) **`ComplaintLogPanel`**(沟通与流程日志) | 完成 |
-| `components/` | `AttachmentPanel` `FailureTypeCascade` `SampleFields` `QmsIcon` `PagePlaceholder` | 可复用 |
-| `api/` | `http`(axios+`errorMessage`) `complaints`(含 `ledger`/`exportLedger`) `masterData` `attachments`(含 `openInNewTab`) `logistics` `verification` `containment` `rootCause` `actions` `reports` `home` **`knowledge`(2.12 新)** | — |
+| `components/` | `AttachmentPanel` `FailureTypeCascade` `SampleFields` `QmsIcon` `PagePlaceholder` **`RichTextEditor`(公告管理新，TipTap 懒加载)** | 可复用 |
+| `api/` | `http`(axios+`errorMessage`) `complaints`(含 `ledger`/`exportLedger`) `masterData` `attachments`(含 `openInNewTab`) `logistics` `verification` `containment` `rootCause` `actions` `reports` `home` **`knowledge`(2.12 新)** **`announcements`(公告管理新)** | — |
 | `stores/` | `auth`(`can(perm)`/`user`) `meta`(字典缓存：含 `fileTypes`、**`knowledgeCategories`(2.12 新)**) | — |
 | 其他 | `layouts/AppLayout.vue` `i18n/` `router/` `styles/`（含 `@media print` 与 `.no-print`） | — |
 
@@ -124,6 +126,7 @@ qms-app/
 | V18 | **`announcement_read(announcement_id, employee_id)`**（遗留清理新增）：公告「NEW」按人未读的依据，点击一次写一行（`ON CONFLICT DO NOTHING` 幂等）。**报告审批没有新表**——基线的 `approval_task` 与 `APPROVAL_*` 状态码本就是为此预留 |
 | V19 | **`attachment.file_type` 由 `varchar(32)` 放宽到 `varchar(128)`**：OOXML 的 MIME 类型长达 64–73 字符，docx/xlsx 原为「宣称支持、实际必挂」且报错与真实原因无关（详见 `retrospective.md` §3.7-8） |
 | V20 | **知识中心（2.12）**：`knowledge_article` 加 `doc_code` / `title_en` / `version` / `summary`；文档编号**部分唯一索引**（`WHERE is_deleted = false AND doc_code IS NOT NULL`，软删不占号）；种 4 条 `knowledge_category` 字典（流程文件 / 分析模板 / 培训教材 / 操作手册）；种权限码 `knowledge:manage` 并**显式**映射给管理员（V3 的管理员权限是当时的 CROSS JOIN 快照，新码不会自动获得） |
+| V21 | **公告正文改富文本（公告管理）**：纯数据迁移，无 schema 变更（`content` 自 V1 起就是 `text`）。把 V9 种的 3 条纯文本公告包成 `<p>`（**幂等**：只在 `content NOT LIKE '<%'` 时改写；`&`→`&amp;` 先于 `<`/`>` 转义）。净化不在迁移做，在应用写入侧（`HtmlSanitizer`） |
 
 > 与 D8 相关的表均在 **V1 基线**：`report_8d`（报告头 + 三日期 + `approval_status` + `template_code`）、`report_step_owner`、`report_distribution`（= 沟通日志）、`approval_task`（通用审批，未接线）。
 
@@ -133,9 +136,9 @@ qms-app/
 
 **构建/运维**：`setup-local-toolchain` `env` `db-create` `db-check` `db-validate-migrations` `sync-baseline-ddl` `sync-prototype-assets` `frontend-install` `frontend-build` `backend-build` `qms-server`(`Start|Stop|Status|Restart`) `list-accounts` `db-clear-complaints` `_check-ps1-encoding` `_shot` `_probe-downloads`。
 
-**验收（API，自清理）**：`verify-auth` `verify-masterdata` **`verify-complaint`(53 项，含流程日志)** **`verify-attachment`(40 项，含 Office 全格式/宏拒收)** `verify-antivirus` `verify-logistics` `verify-verification`(D2) `verify-containment`(D3) `verify-rootcause`(D4) **`verify-actions`(D5/D6/D7，57 项)** **`verify-report`(D8，60 项，含审批链与 PDF)** **`verify-ledger`(2.9，54 项)** **`verify-home`(2.10，43 项，含公告已读)** **`verify-knowledge`(2.12，68 项)**。
+**验收（API，自清理）**：`verify-auth` `verify-masterdata` **`verify-complaint`(53 项，含流程日志)** **`verify-attachment`(40 项，含 Office 全格式/宏拒收)** `verify-antivirus` `verify-logistics` `verify-verification`(D2) `verify-containment`(D3) `verify-rootcause`(D4) **`verify-actions`(D5/D6/D7，57 项)** **`verify-report`(D8，60 项，含审批链与 PDF)** **`verify-ledger`(2.9，54 项)** **`verify-home`(2.10，43→44 项，含公告已读与正文为 HTML)** **`verify-knowledge`(2.12，68 项)** **`verify-announcement`(公告管理，64 项)**。
 
-**UI 端到端（真机 + 截图落 `tools/_out/ui`）**：`ui-capture` `ui-wizard` `ui-logistics` `ui-d2` `ui-d3` `ui-d4` `ui-d5` `ui-d6` `ui-d7` **`ui-d8`(18 项，三角色走完审批链)** `ui-lazyload` **`ui-ledger`(20 项)** **`ui-home`(26 项，含 NEW 标识与 1280/1180 两次布局核对)** **`ui-knowledge`(2.12，34 项，含 1280/1180 版式核对与管理员/读者双角色)**。
+**UI 端到端（真机 + 截图落 `tools/_out/ui`）**：`ui-capture` `ui-wizard` `ui-logistics` `ui-d2` `ui-d3` `ui-d4` `ui-d5` `ui-d6` `ui-d7` **`ui-d8`(18 项，三角色走完审批链)** `ui-lazyload` **`ui-ledger`(20 项)** **`ui-home`(26 项，含 NEW 标识与 1280/1180 两次布局核对)** **`ui-knowledge`(2.12，34 项，含 1280/1180 版式核对与管理员/读者双角色)** **`ui-announcement`(公告管理，17 项，管理员发布 + 首页抽屉渲染 HTML + 工程师无入口)**。
 
 **种子**：`seed-demo-showcase.ps1`——建一张走完 **D0–D8** 的展示单（含已生成的报告），打印详情页与报告页 URL（演示用，**不清理**）。**`seed-demo-ledger.ps1`**（**2.9 新增**）——走真实 API 造 40 张演示投诉（覆盖 9 个阶段、~20% 超期、4 张正常结案、4 张投诉不成立；每 3 张里 1 张「属于 U04」，让双页签与首页待办都有内容），最后回填 `created_at` 使「处理天数」非 0；文案在 `_seed_ledger_text.json`。**用前先 `db-clear-complaints.ps1 -Force`**（只增不删）。
 
@@ -166,9 +169,10 @@ qms-app/
 | **D8 报告与结案** | ✅ | ✅ | `verify-report` 60 | `ui-d8` 18 |
 | 附件中心 | ✅ | ✅ | `verify-attachment` 40 / `verify-antivirus` 17 | UI 上传验证 |
 | **知识中心 3.11（2.12）** | ✅ | ✅ | `verify-knowledge` 68 | `ui-knowledge` 34 |
+| **公告管理（PS-003，公告富文本）** | ✅ | ✅ | `verify-announcement` 64（+ `verify-home` 44） | `ui-announcement` 17 |
 
-> **合计（2026-10-14 实测，全绿）**：API 验收 **673 项**（14 个 `verify-*.ps1`）；
-> UI 端到端 **186 项**（14 个 `ui-*.ps1` / `e2e\*.mjs`，另有 `ui-capture` 5 角色菜单截图）。
+> **合计（2026-10-15 实测，全绿）**：API 验收 **738 项**（15 个 `verify-*.ps1`）；
+> UI 端到端 **203 项**（15 个 `ui-*.ps1` / `e2e\*.mjs`，另有 `ui-capture` 5 角色菜单截图）。
 > 逐脚本清单见 §6。
 
 ---
@@ -181,7 +185,8 @@ qms-app/
 |---|---|---|
 | **2.9 问题解决台账（双页签）** | **完成** | 双页签确认=「与我相关 / 全部数据」；`GET /api/complaints`（分页/筛选/排序，排序白名单在 mapper 的 `<choose>`）+ `GET /api/complaints/export`（xlsx）；「与我相关」最宽口径（4 责任人+发起人+阶段任务 owner）；API 54 项 + UI 20 项 |
 | **2.10 首页工作台** | **完成** | `GET /api/home/overview`（指标+待办+超期横幅，待办从阶段表按 `is_final` 聚合）+ `GET /api/announcements`；详情页支持 `?tab=` 定位；API 43 项 + UI 26 项 |
-| 2.11 报表与分析 | `ReportsView.vue` = 占位 | 后端零；需求 3.10（8D 状态统计 + 3 个 KPI + TPT 分析 + 自定义报表/导出） |
+| **2.11 报表与分析** | `ReportsView.vue` = 占位 | 后端零；需求 3.10（8D 状态统计 + 3 个 KPI + TPT 分析 + 自定义报表/导出） |
+| **公告管理（PS-003，公告富文本）** | **完成** | 需求 3.0 的公告从「只读、纯文本」补成完整管理：`announcement:manage` 后台页（新增/编辑/发布/下架/软删）+ 正文改**富文本**（TipTap 编辑器 + jsoup 白名单净化 + 首页抽屉 `v-html`）；V21 把历史纯文本公告转成 HTML。API 64 项 + UI 17 项 |
 | **2.12 知识中心** | **完成** | 需求 3.11：`knowledge_article` 扩 4 列 + `knowledge_category` 字典 + `knowledge:manage`（V20）；后端 `knowledge` 模块；前端文档库（分类分组 / 筛选计数 / 关键词检索 / 下载 / PDF·图片预览 / 管理员维护 + 附件）。API 68 项 + UI 34 项。**经验分享（标签/订阅/模糊检索）按需求 1.5 一期排除** |
 
 **2.9/2.10 刻意偏离原型的四处**（交付时须说明）：① 公告无「置顶」徽标（`system_announcement` 无置顶列）；② 公告抽屉无附件；③ ~~待审批报告尚未单列~~ **已于 2026-10-14 遗留清理中接线**（`report_8d.approval_status` = DRAFT/PENDING/APPROVED/REJECTED，`approval_task` 记录审批人，「待审批报告」按**审批人**归属）；④ 台账「流程类型」列与筛选**已删**——`complaint.process_type` 恒为 `'8D'`，原型那四个中文字流类型在真实系统无数据支撑。
@@ -223,5 +228,8 @@ qms-app/
 18. **Element Plus 的 `el-input` / `el-select` 会把 fallthrough 属性转发到内层控件**，所以 UI 脚本把 `data-*` 钩子挂在组件上时，`[data-x] input` 这类后代选择器**匹配不到**（属性其实落在 `<input>` 上）。对策：把钩子挂在自己写的包装元素上（本项目用 `<div class="kb-field" data-kb-field-xxx>`），选择器才是确定的。
 19. **V3 种管理员权限用的是当时的 `CROSS JOIN` 全量快照**，所以**任何后加的权限码都不会自动落到管理员头上**，必须在新增迁移里显式补一条 `role_permission`（V20 的 `knowledge:manage` 就是这么做的，并在迁移里写了注释）。同时：**加权限码会让断言「权限总数」的脚本失败** —— `verify-masterdata.ps1` 有一条 `administrator sees 25 permissions`，本轮会同改成 26。
 20. **`db-validate-migrations.ps1` 不要用 `2>&1` 调用**：它内部 `dropdb --if-exists` 在没有临时库时会把一行中文提示写到 stderr，而脚本顶层是 `$ErrorActionPreference='Stop'`，于是**脚本在第一条迁移之前就中止**（表现为「校验失败」而其实什么都没跑）。直接调用正常。这与第 1 条坑同源。
+21. **Spring Boot 3.4.1 的父 POM 并不管理 `org.jsoup:jsoup` 的版本**（它管 `tika`、`pdfbox` 等，但 jsoup 要从 BOM 外自己钉）。`<dependency>` 不写 `<version>` 会在**读 POM 阶段**就报 `'dependencies.dependency.version' ... is missing`。加 jsoup 时要配 `${jsoup.version}`。**教训：别假设「Spring Boot 管所有常见依赖的版本」，第一次构建就会告诉你。**
+22. **`$home` 是 PowerShell 的保留自动变量**（= 用户主目录），脚本里 `$home = ...` 会抛 `VariableNotWritable` 而**不终止**（`$ErrorActionPreference='Continue'`），于是 `$home` 仍是主目录字符串，`@($home | Where-Object {...})` 的断言**静默假成立/假失败**（本轮两条首页公告断言就是这样被歪掉的）。给列表变量起名避开 `$home`/`$input`/`$args` 等保留名（用 `$homeList`）。
+23. **富文本正文用 `v-html` 渲染时**：① scoped 样式**不作用于 `v-html` 子节点**，块级样式要写 `.ann-body :deep(p){}`；② 旧的 `white-space: pre-wrap` 必须去掉（否则每个标签边界多一个空行）；③ 写入侧必须净化（`HtmlSanitizer`），读取侧**不要**再洗一遍，否则列序/引号被规范化、字节往返断言必挂。另：`Safelist` 里漏掉 `<p>` 会让 TipTap 的每个段落存成空。
 
 > 相关记忆文件：`~/.claude/projects/C--Users-Vivien-ma/memory/reference_qms_app_workspace.md`（阶段进度、脚本清单、全部踩坑、D5–D8 设计决策）。
