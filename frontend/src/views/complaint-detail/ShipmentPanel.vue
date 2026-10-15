@@ -10,6 +10,7 @@ import {
 } from '@/api/logistics'
 import { errorMessage } from '@/api/http'
 import { useMetaStore } from '@/stores/meta'
+import RowAction from '@/components/RowAction.vue'
 
 /**
  * Sample logistics (requirement 3.2). A complaint can have several batches, and
@@ -257,11 +258,13 @@ async function removeSampleFromBatch(sampleId: string) {
           <span :class="{ 't-danger': row.overdueDays > 0 }">{{ row.targetDate || '—' }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="200" fixed="right">
+      <el-table-column label="操作" width="120" fixed="right">
         <template #default="{ row }">
-          <el-button link type="primary" @click="openDetail(row)">详情</el-button>
-          <el-button v-if="canEdit" link type="primary" @click="openEdit(row)">编辑</el-button>
-          <el-button v-if="canEdit" link type="danger" @click="removeShipment(row)">删除</el-button>
+          <span class="row-acts">
+            <RowAction act="detail" icon="eye" label="详情" @click="openDetail(row)" />
+            <RowAction v-if="canEdit" act="edit" icon="pencil" label="编辑" @click="openEdit(row)" />
+            <RowAction v-if="canEdit" act="delete" icon="trash" tone="danger" label="删除" @click="removeShipment(row)" />
+          </span>
         </template>
       </el-table-column>
     </el-table>
@@ -409,9 +412,11 @@ async function removeSampleFromBatch(sampleId: string) {
             <el-table-column label="失效类型" min-width="180" show-overflow-tooltip>
               <template #default="{ row }">{{ row.failureTypeName || '—' }}</template>
             </el-table-column>
-            <el-table-column v-if="canEdit" label="操作" width="90" fixed="right">
+            <el-table-column v-if="canEdit" label="操作" width="72" fixed="right">
               <template #default="{ row }">
-                <el-button link type="danger" @click="removeSampleFromBatch(row.sampleId)">移出</el-button>
+                <span class="row-acts">
+                  <RowAction act="remove" icon="arrowRightFromLine" tone="danger" label="移出" @click="removeSampleFromBatch(row.sampleId)" />
+                </span>
               </template>
             </el-table-column>
           </el-table>

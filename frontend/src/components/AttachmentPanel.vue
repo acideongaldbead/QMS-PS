@@ -8,6 +8,7 @@ import {
   type UploadRules
 } from '@/api/attachments'
 import { errorMessage } from '@/api/http'
+import RowAction from '@/components/RowAction.vue'
 
 /**
  * Attachments for one business record. Reused by the registration result panel
@@ -136,10 +137,12 @@ async function onDownload(item: AttachmentView) {
           {{ row.uploadedAt ? String(row.uploadedAt).replace('T', ' ').slice(0, 19) : '' }}
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="130" fixed="right">
+      <el-table-column label="操作" width="96" fixed="right">
         <template #default="{ row }">
-          <el-button link type="primary" @click="onDownload(row)">下载</el-button>
-          <el-button v-if="!readonly" link type="danger" @click="onRemove(row)">删除</el-button>
+          <span class="row-acts">
+            <RowAction act="download" icon="download" label="下载" @click="onDownload(row)" />
+            <RowAction v-if="!readonly" act="delete" icon="trash" tone="danger" label="删除" @click="onRemove(row)" />
+          </span>
         </template>
       </el-table-column>
     </el-table>

@@ -7,6 +7,7 @@ import { errorMessage } from '@/api/http'
 import { complaintApi, type LedgerQuery, type LedgerRow } from '@/api/complaints'
 import { masterDataApi, type StatusCode } from '@/api/masterData'
 import { useMetaStore } from '@/stores/meta'
+import RowAction from '@/components/RowAction.vue'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -555,10 +556,12 @@ watch(
             <span class="mono fs-12 t-2">{{ row.customerReferenceId || '—' }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="150" fixed="right">
+        <el-table-column label="操作" width="96" fixed="right">
           <template #default="{ row }">
-            <el-button link type="primary" @click="openDetail(row)">查看</el-button>
-            <el-button link type="primary" @click="copyComplaint(row)">复制</el-button>
+            <span class="row-acts">
+              <RowAction act="view" icon="eye" label="查看" @click="openDetail(row)" />
+              <RowAction act="copy" icon="copy" label="复制" @click="copyComplaint(row)" />
+            </span>
           </template>
         </el-table-column>
       </el-table>

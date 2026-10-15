@@ -190,6 +190,20 @@ try {
   )
   console.log(`         fishbone fetched ${fishAssets.length} assets, ${kb(bytesSince(mark))}`)
 
+  // --- stage 6: the knowledge centre list --------------------------------
+  // The Office preview renderers must only load when a preview actually opens.
+  mark = assets.length
+  await page.goto(`${base}/#/kb`, { waitUntil: 'networkidle2', timeout: 40000 })
+  await wait(2500)
+
+  const kbAssets = since(mark)
+  note(
+    'the knowledge-centre list pulls no Office preview renderer',
+    !matchesAny(kbAssets, /docx-preview|read-excel-file|pptx-preview/i),
+    kbAssets.filter((n) => /docx-preview|read-excel-file|pptx-preview/i.test(n)).join(', ')
+  )
+  console.log(`         knowledge list fetched ${kbAssets.length} assets, ${kb(bytesSince(mark))}`)
+
   const totalBytes = assets.reduce((s, a) => s + a.bytes, 0)
   console.log('')
   console.log(`         whole session: ${assets.length} assets, ${kb(totalBytes)}`)

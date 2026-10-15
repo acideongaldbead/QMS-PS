@@ -5,9 +5,13 @@
   "type": "module",
   "description": "UI capture harness: drives the real app in Edge, screenshots pages and reports what each role can see.",
   "scripts": {
-    "capture": "node capture.mjs"
+    "capture": "node capture.mjs",
+    "fixtures": "node make-fixtures.mjs"
   },
   "dependencies": {
     "puppeteer-core": "^23.10.0"
+  },
+  "devDependencies": {
+    "pptxgenjs": "^3.12.0"
   }
 }

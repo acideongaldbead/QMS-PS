@@ -5,6 +5,7 @@ import { ElMessage } from 'element-plus'
 import { reportsApi, type Approver, type ReportView } from '@/api/reports'
 import { errorMessage } from '@/api/http'
 import { useAuthStore } from '@/stores/auth'
+import RowAction from '@/components/RowAction.vue'
 
 /**
  * D8: reports and settlement (requirement 3.9).
@@ -221,17 +222,21 @@ function formatTime(value?: string | null): string {
       <el-table-column label="生成时间" width="140">
         <template #default="{ row }">{{ formatTime(row.generatedAt) }}</template>
       </el-table-column>
-      <el-table-column label="操作" width="260" fixed="right">
+      <el-table-column label="操作" width="120" fixed="right">
         <template #default="{ row }">
-          <el-button link type="primary" @click="openReport(row)">查看报告</el-button>
-          <el-button v-if="canSubmit(row)" link type="primary" @click="openSubmit(row)">提交审批</el-button>
-          <el-button v-if="canDecide(row)" link type="warning" @click="openApprove(row)">审批</el-button>
-          <el-button v-if="canSend && row.approvalStatus === 'APPROVED'" link type="primary" @click="openSend(row)">
-            发送
-          </el-button>
-          <el-tooltip v-else-if="canSend" content="需先提交审批并获得批准" placement="top">
-            <span class="fs-12 t-4" style="margin-left: 8px">发送</span>
-          </el-tooltip>
+          <span class="row-acts">
+            <RowAction act="viewReport" icon="file" label="查看报告" @click="openReport(row)" />
+            <RowAction v-if="canSubmit(row)" act="submit" icon="upload" label="提交审批" @click="openSubmit(row)" />
+            <RowAction v-if="canDecide(row)" act="approve" icon="check" tone="warning" label="审批" @click="openApprove(row)" />
+            <RowAction
+              v-if="canSend"
+              act="send"
+              icon="send"
+              :disabled="row.approvalStatus !== 'APPROVED'"
+              :label="row.approvalStatus === 'APPROVED' ? '发送' : '需先提交审批并获得批准'"
+              @click="openSend(row)"
+            />
+          </span>
         </template>
       </el-table-column>
     </el-table>

@@ -12,6 +12,7 @@ import {
   type RootCauseView
 } from '@/api/rootCause'
 import { errorMessage } from '@/api/http'
+import RowAction from '@/components/RowAction.vue'
 import { useMetaStore } from '@/stores/meta'
 import WhyMindMap from './WhyMindMap.vue'
 import FishboneEditor from './FishboneEditor.vue'
@@ -288,11 +289,13 @@ function orgTypeLabel(code?: string | null): string {
           </el-button>
         </template>
       </el-table-column>
-      <el-table-column v-if="canEdit" label="操作" width="200" fixed="right">
+      <el-table-column v-if="canEdit" label="操作" width="122" fixed="right">
         <template #default="{ row }">
-          <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
-          <el-button link type="primary" @click="openTransfer(row)">转交</el-button>
-          <el-button link type="danger" @click="remove(row)">删除</el-button>
+          <span class="row-acts">
+            <RowAction act="edit" icon="pencil" label="编辑" @click="openEdit(row)" />
+            <RowAction act="transfer" icon="transfer" label="转交" @click="openTransfer(row)" />
+            <RowAction act="delete" icon="trash" tone="danger" label="删除" @click="remove(row)" />
+          </span>
         </template>
       </el-table-column>
     </el-table>

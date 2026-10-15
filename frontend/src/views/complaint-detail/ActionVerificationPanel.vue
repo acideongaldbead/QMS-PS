@@ -9,6 +9,7 @@ import {
 } from '@/api/actions'
 import { errorMessage } from '@/api/http'
 import AttachmentPanel from '@/components/AttachmentPanel.vue'
+import RowAction from '@/components/RowAction.vue'
 
 /**
  * D6: implementation feedback and the effectiveness check for each corrective
@@ -198,9 +199,11 @@ function formatTime(value?: string | null): string {
               <el-table-column label="验证时间" width="150">
                 <template #default="{ row: v }">{{ formatTime(v.verifiedAt) }}</template>
               </el-table-column>
-              <el-table-column v-if="canVerify" label="操作" width="80" fixed="right">
+              <el-table-column v-if="canVerify" label="操作" width="72" fixed="right">
                 <template #default="{ row: v }">
-                  <el-button link type="danger" @click="remove(row, v)">删除</el-button>
+                  <span class="row-acts">
+                    <RowAction act="delete" icon="trash" tone="danger" label="删除" @click="remove(row, v)" />
+                  </span>
                 </template>
               </el-table-column>
             </el-table>

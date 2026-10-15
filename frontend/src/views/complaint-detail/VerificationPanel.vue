@@ -12,6 +12,7 @@ import {
 import { errorMessage } from '@/api/http'
 import { useAuthStore } from '@/stores/auth'
 import { useMetaStore } from '@/stores/meta'
+import RowAction from '@/components/RowAction.vue'
 import FailureTypeCascade from '@/components/FailureTypeCascade.vue'
 
 /**
@@ -378,9 +379,11 @@ function onBatchLevel2(row: ResultRequest) {
                   {{ r.recordedAt ? String(r.recordedAt).replace('T', ' ').slice(0, 16) : '' }}
                 </template>
               </el-table-column>
-              <el-table-column v-if="canVerify" label="操作" width="80" fixed="right">
+              <el-table-column v-if="canVerify" label="操作" width="72" fixed="right">
                 <template #default="{ row: r }">
-                  <el-button link type="danger" @click="removeResult(row.taskId, r.resultId)">删除</el-button>
+                  <span class="row-acts">
+                    <RowAction act="delete" icon="trash" tone="danger" label="删除" @click="removeResult(row.taskId, r.resultId)" />
+                  </span>
                 </template>
               </el-table-column>
             </el-table>
@@ -417,8 +420,10 @@ function onBatchLevel2(row: ResultRequest) {
       </el-table-column>
       <el-table-column v-if="canVerify" label="操作" width="120" fixed="right">
         <template #default="{ row }">
-          <el-button link type="primary" @click="openEditTask(row)">编辑</el-button>
-          <el-button link type="danger" @click="removeTask(row)">删除</el-button>
+          <span class="row-acts">
+            <RowAction act="edit" icon="pencil" label="编辑" @click="openEditTask(row)" />
+            <RowAction act="delete" icon="trash" tone="danger" label="删除" @click="removeTask(row)" />
+          </span>
         </template>
       </el-table-column>
     </el-table>
@@ -702,9 +707,11 @@ function onBatchLevel2(row: ResultRequest) {
             <el-input v-model="row.resultConclusion" size="small" />
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="80">
+        <el-table-column label="操作" width="72">
           <template #default="{ $index }">
-            <el-button link type="danger" @click="removeBatchRow($index)">移除</el-button>
+            <span class="row-acts">
+              <RowAction act="remove" icon="arrowRightFromLine" tone="danger" label="移除" @click="removeBatchRow($index)" />
+            </span>
           </template>
         </el-table-column>
       </el-table>

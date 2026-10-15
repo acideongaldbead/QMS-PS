@@ -53,6 +53,21 @@ const page = await context.newPage()
 await page.setViewport({ width: 1680, height: 1080 })
 const wait = (ms) => new Promise((r) => setTimeout(r, ms))
 
+/** Clicks a row-action icon through its data-act hook. A fixed column renders a
+ *  hidden clone of the button, so the first visible one wins. */
+async function clickAct(act) {
+  const ok = await page.evaluate((a) => {
+    const el = Array.from(document.querySelectorAll(`[data-act="${a}"]`)).find(
+      (e) => e.offsetParent !== null
+    )
+    if (!el) return false
+    el.click()
+    return true
+  }, act)
+  await wait(700)
+  return ok
+}
+
 async function clickText(text, scope = 'body') {
   const ok = await page.evaluate(
     (t, s) => {
@@ -180,8 +195,28 @@ try {
     shipmentRows.length + ' rows'
   )
 
+  // --- the action is icon-only, so its name lives in the hover tooltip ------
+  const detailBox = await page.evaluate(() => {
+    const b = Array.from(document.querySelectorAll('.row-act[data-act="detail"]')).find(
+      (e) => e.offsetParent !== null
+    )
+    if (!b) return null
+    const r = b.getBoundingClientRect()
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 }
+  })
+  if (detailBox) await page.mouse.move(detailBox.x, detailBox.y)
+  await wait(900)
+  const actionTip = await page.evaluate(() =>
+    Array.from(document.querySelectorAll('.el-popper'))
+      .filter((p) => p.offsetParent !== null)
+      .map((p) => p.textContent.trim())
+      .join('|')
+  )
+  note('hovering a row action reveals its name in a tooltip', actionTip.includes('详情'), `tooltip=${actionTip}`)
+  await shot('4b-action-tooltip')
+
   // --- open the batch and move a sample into it ----------------------------
-  if (!(await clickText('详情'))) throw new Error('could not open the batch drawer')
+  if (!(await clickAct('detail'))) throw new Error('could not open the batch drawer')
   await wait(1500)
   await shot('5-batch-drawer')
 

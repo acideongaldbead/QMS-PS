@@ -14,6 +14,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useMetaStore } from '@/stores/meta'
 import QmsIcon from '@/components/QmsIcon.vue'
 import AttachmentPanel from '@/components/AttachmentPanel.vue'
+import DocumentPreviewDialog from '@/components/DocumentPreviewDialog.vue'
 
 const { t, locale } = useI18n()
 const auth = useAuthStore()
@@ -30,6 +31,12 @@ const loading = ref(false)
 /** Empty string means "all categories" -- the server treats it as no filter. */
 const activeCategory = ref('')
 const keyword = ref('')
+
+/** The document opened in the in-page Office preview, if any. */
+const previewOpen = ref(false)
+const previewAttachmentId = ref<number | null>(null)
+const previewFileName = ref('')
+const previewFileSize = ref<number | null>(null)
 
 const dialogOpen = ref(false)
 const editingId = ref<number | null>(null)
@@ -120,13 +127,17 @@ function fileIconText(row: KnowledgeArticle): string {
   return (fileExtension(row) || '—').slice(0, 4).toUpperCase()
 }
 
-/** Only the formats a browser renders itself can be previewed in a tab. */
+/** Formats the browser renders natively, opened in a new tab. */
+const NATIVE_EXT = ['pdf', 'png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp']
+/** Office formats rendered in-page by DocumentPreviewDialog. */
+const OFFICE_EXT = ['docx', 'xlsx', 'pptx']
+
+/**
+ * The preview control is live whenever the row has a file: the formats we cannot
+ * render fall through to a "please download" message rather than a dead button.
+ */
 function canPreview(row: KnowledgeArticle): boolean {
-  const type = row.latestFileType ?? ''
-  return (
-    row.latestAttachmentId != null &&
-    (type === 'application/pdf' || type.startsWith('image/'))
-  )
+  return row.latestAttachmentId != null
 }
 
 function formatDate(value?: string | null): string {
@@ -166,8 +177,19 @@ async function preview(row: KnowledgeArticle) {
     ElMessage.info(t('kb.previewUnsupported'))
     return
   }
+  const ext = fileExtension(row)
   try {
-    await attachmentApi.openInNewTab(row.latestAttachmentId as number)
+    if (NATIVE_EXT.includes(ext)) {
+      // PDF and images have a native viewer, so a new tab beats an in-app frame.
+      await attachmentApi.openInNewTab(row.latestAttachmentId as number)
+    } else if (OFFICE_EXT.includes(ext)) {
+      previewAttachmentId.value = row.latestAttachmentId as number
+      previewFileName.value = row.latestFileName ?? titleOf(row)
+      previewFileSize.value = row.latestFileSize ?? null
+      previewOpen.value = true
+    } else {
+      ElMessage.info(t('kb.previewUnsupported'))
+    }
   } catch (e) {
     ElMessage.error(errorMessage(e))
   }
@@ -417,26 +439,6 @@ onMounted(async () => {
             </button>
           </div>
         </div>
-
-        <div class="card">
-          <div class="card-head tinted">
-            <div><div class="card-title">{{ t('kb.rulesTitle') }}</div></div>
-          </div>
-          <div class="card-body">
-            <dl class="kv tight">
-              <dt>{{ t('kb.ruleMaintainer') }}</dt>
-              <dd>{{ t('kb.ruleMaintainerValue') }}</dd>
-              <dt>{{ t('kb.ruleStructure') }}</dt>
-              <dd>{{ t('kb.ruleStructureValue') }}</dd>
-              <dt>{{ t('kb.ruleVersion') }}</dt>
-              <dd>{{ t('kb.ruleVersionValue') }}</dd>
-              <dt>{{ t('kb.ruleAttachment') }}</dt>
-              <dd>{{ t('kb.ruleAttachmentValue') }}</dd>
-              <dt>{{ t('kb.ruleBilingual') }}</dt>
-              <dd>{{ t('kb.ruleBilingualValue') }}</dd>
-            </dl>
-          </div>
-        </div>
       </aside>
     </div>
 
@@ -522,6 +524,13 @@ onMounted(async () => {
         </el-button>
       </template>
     </el-dialog>
+
+    <DocumentPreviewDialog
+      v-model="previewOpen"
+      :attachment-id="previewAttachmentId"
+      :file-name="previewFileName"
+      :file-size="previewFileSize"
+    />
   </div>
 </template>
 

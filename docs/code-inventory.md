@@ -89,11 +89,11 @@ qms-app/
 | | `ComplaintCreateView` + `complaint-new/Step*`(5 步向导) | 完成 |
 | | `ComplaintDetailView` | 完成（阶段条 + 11 个页签全部接线；**支持 `?tab=` 定位**，首页待办一键跳转到对应阶段） |
 | | `Report8DView` `ReportSendView` | 完成（D8） |
-| | `KnowledgeView` | **完成（2.12）**——左文档库（按分类分组）+ 右分类筛选（带计数）与维护规则；关键词检索（走服务端）、下载、PDF/图片在线预览；管理员可新建/编辑/软删并上传文档附件。页内把 `.grid-sidebar` 覆盖为「窄右栏」以免筛选栏在 1280 以下被拍成单列 |
+| | `KnowledgeView` | **完成（2.12）**——左文档库（按分类分组）+ 右分类筛选（带计数）；关键词检索（走服务端）、下载、**在线预览**（PDF/图片走新标签页，**docx/xlsx/pptx 在弹窗内客户端渲染**）；管理员可新建/编辑/软删并上传文档附件。页内把 `.grid-sidebar` 覆盖为「窄右栏」以免筛选栏在 1280 以下被拍成单列。**（2026-10-15 按用户要求移除右侧「维护规则」卡片）** |
 | | `AnnouncementManageView` | **完成（公告管理）**——公告列表（状态筛选 全部/草稿/已发布/已下架）+ 新建/编辑对话框（标题、发布时间、**TipTap 富文本正文**）+ 发布/下架/删除；仅 `announcement:manage` 可见，路由同权限门控 |
 | | `ReportsView` | **占位**（2.11 未开始） |
 | `views/complaint-detail/` | `StageBar` `SamplePanel` `ShipmentPanel` `VerificationPanel`(D2) `ContainmentPanel`(D3) `RootCausePanel`(D4) `WhyMindMap` `FishboneEditor` `CorrectiveActionPanel`(D5) `ActionVerificationPanel`(D6) `PreventionPanel`(D7) `ReportPanel`(D8，含提交审批/审批) **`ComplaintLogPanel`**(沟通与流程日志) | 完成 |
-| `components/` | `AttachmentPanel` `FailureTypeCascade` `SampleFields` `QmsIcon` `PagePlaceholder` **`RichTextEditor`(公告管理新，TipTap 懒加载)** | 可复用 |
+| `components/` | `AttachmentPanel` `FailureTypeCascade` `SampleFields` `QmsIcon` `PagePlaceholder` **`RichTextEditor`(公告管理，TipTap 懒加载)** **`DocumentPreviewDialog`(Office 预览，三个渲染器懒加载)** **`RowAction`(表格操作列图标按钮，悬停浮窗)** | 可复用 |
 | `api/` | `http`(axios+`errorMessage`) `complaints`(含 `ledger`/`exportLedger`) `masterData` `attachments`(含 `openInNewTab`) `logistics` `verification` `containment` `rootCause` `actions` `reports` `home` **`knowledge`(2.12 新)** **`announcements`(公告管理新)** | — |
 | `stores/` | `auth`(`can(perm)`/`user`) `meta`(字典缓存：含 `fileTypes`、**`knowledgeCategories`(2.12 新)**) | — |
 | 其他 | `layouts/AppLayout.vue` `i18n/` `router/` `styles/`（含 `@media print` 与 `.no-print`） | — |
@@ -138,7 +138,7 @@ qms-app/
 
 **验收（API，自清理）**：`verify-auth` `verify-masterdata` **`verify-complaint`(53 项，含流程日志)** **`verify-attachment`(40 项，含 Office 全格式/宏拒收)** `verify-antivirus` `verify-logistics` `verify-verification`(D2) `verify-containment`(D3) `verify-rootcause`(D4) **`verify-actions`(D5/D6/D7，57 项)** **`verify-report`(D8，60 项，含审批链与 PDF)** **`verify-ledger`(2.9，54 项)** **`verify-home`(2.10，43→44 项，含公告已读与正文为 HTML)** **`verify-knowledge`(2.12，68 项)** **`verify-announcement`(公告管理，64 项)**。
 
-**UI 端到端（真机 + 截图落 `tools/_out/ui`）**：`ui-capture` `ui-wizard` `ui-logistics` `ui-d2` `ui-d3` `ui-d4` `ui-d5` `ui-d6` `ui-d7` **`ui-d8`(18 项，三角色走完审批链)** `ui-lazyload` **`ui-ledger`(20 项)** **`ui-home`(26 项，含 NEW 标识与 1280/1180 两次布局核对)** **`ui-knowledge`(2.12，34 项，含 1280/1180 版式核对与管理员/读者双角色)** **`ui-announcement`(公告管理，17 项，管理员发布 + 首页抽屉渲染 HTML + 工程师无入口)**。
+**UI 端到端（真机 + 截图落 `tools/_out/ui`）**：`ui-capture` `ui-wizard` **`ui-logistics`(10 项，含悬停浮窗断言)** `ui-d2` `ui-d3` `ui-d4` `ui-d5` `ui-d6` `ui-d7` **`ui-d8`(18 项，三角色走完审批链)** `ui-lazyload` **`ui-ledger`(20 项)** **`ui-home`(26 项，含 NEW 标识与 1280/1180 两次布局核对)** **`ui-knowledge`(2.12/Office 预览，**39 项**，含 docx/xlsx/pptx 三种真实文件在线预览、1280/1180 版式核对与管理员/读者双角色)** **`ui-announcement`(公告管理，17 项，管理员发布 + 首页抽屉渲染 HTML + 工程师无入口)**。
 
 **种子**：`seed-demo-showcase.ps1`——建一张走完 **D0–D8** 的展示单（含已生成的报告），打印详情页与报告页 URL（演示用，**不清理**）。**`seed-demo-ledger.ps1`**（**2.9 新增**）——走真实 API 造 40 张演示投诉（覆盖 9 个阶段、~20% 超期、4 张正常结案、4 张投诉不成立；每 3 张里 1 张「属于 U04」，让双页签与首页待办都有内容），最后回填 `created_at` 使「处理天数」非 0；文案在 `_seed_ledger_text.json`。**用前先 `db-clear-complaints.ps1 -Force`**（只增不删）。
 
@@ -148,7 +148,7 @@ qms-app/
 
 ## 7. e2e 清单 `e2e/`（puppeteer-core → 本机 Edge，不下载 Chromium）
 
-`capture.mjs`（多角色登录截图）、`wizard.mjs`（登记向导）、`detail.mjs`、`d2.mjs` `d3.mjs` `d4.mjs` `d5.mjs` `d6.mjs` `d7.mjs` `d8.mjs`（各阶段页签端到端）、**`ledger.mjs`** **`home.mjs`**、`lazy-load.mjs`（按需加载实测）、`fake-clamd.mjs`（模拟 clamd 守护进程）。
+`capture.mjs`（多角色登录截图）、`wizard.mjs`（登记向导）、`detail.mjs`、`d2.mjs` `d3.mjs` `d4.mjs` `d5.mjs` `d6.mjs` `d7.mjs` `d8.mjs`（各阶段页签端到端）、**`ledger.mjs`** **`home.mjs`** **`knowledge.mjs`** **`announcement.mjs`**、`lazy-load.mjs`（按需加载实测）、`fake-clamd.mjs`（模拟 clamd 守护进程）、**`make-fixtures.mjs`**（一次性生成 Office 预览样本 `fixtures/preview-sample.pptx`，非测试流程的一部分）。
 
 调用方式：每个 `ui-dN.ps1` 负责**建数据 + 找 Edge + 跑对应 `dN.mjs` + 清理**；浏览器逻辑在 `.mjs` 里。
 
@@ -159,7 +159,7 @@ qms-app/
 | 阶段 | 后端 | 前端 | API 断言 | UI 断言 |
 |---|---|---|---|---|
 | D0/D1 登记 + 团队 | ✅ | ✅ 向导/详情 | `verify-complaint` 53 | `ui-wizard` |
-| 样品与物流 | ✅ | ✅ | `verify-logistics` 50 | `ui-logistics` 9 |
+| 样品与物流 | ✅ | ✅ | `verify-logistics` 50 | `ui-logistics` 10 |
 | D2 验证与问题定义 | ✅ | ✅ | `verify-verification` 76 | `ui-d2` 16 |
 | D3 遏制措施 | ✅ | ✅ | `verify-containment` 55 | `ui-d3` 11 |
 | D4 根因分析 | ✅ | ✅ | `verify-rootcause` 54 | `ui-d4` 11 |
@@ -168,11 +168,11 @@ qms-app/
 | D7 预防再发生 | ✅ | ✅ | 同上（D7 段） | `ui-d7` 6 |
 | **D8 报告与结案** | ✅ | ✅ | `verify-report` 60 | `ui-d8` 18 |
 | 附件中心 | ✅ | ✅ | `verify-attachment` 40 / `verify-antivirus` 17 | UI 上传验证 |
-| **知识中心 3.11（2.12）** | ✅ | ✅ | `verify-knowledge` 68 | `ui-knowledge` 34 |
+| **知识中心 3.11（2.12）** | ✅ | ✅ | `verify-knowledge` 68 | `ui-knowledge` 39（含 Office 预览） |
 | **公告管理（PS-003，公告富文本）** | ✅ | ✅ | `verify-announcement` 64（+ `verify-home` 44） | `ui-announcement` 17 |
 
 > **合计（2026-10-15 实测，全绿）**：API 验收 **738 项**（15 个 `verify-*.ps1`）；
-> UI 端到端 **203 项**（15 个 `ui-*.ps1` / `e2e\*.mjs`，另有 `ui-capture` 5 角色菜单截图）。
+> UI 端到端 **209 项**（15 个 `ui-*.ps1` / `e2e\*.mjs`，另有 `ui-capture` 5 角色菜单截图）。
 > 逐脚本清单见 §6。
 
 ---
@@ -187,7 +187,8 @@ qms-app/
 | **2.10 首页工作台** | **完成** | `GET /api/home/overview`（指标+待办+超期横幅，待办从阶段表按 `is_final` 聚合）+ `GET /api/announcements`；详情页支持 `?tab=` 定位；API 43 项 + UI 26 项 |
 | **2.11 报表与分析** | `ReportsView.vue` = 占位 | 后端零；需求 3.10（8D 状态统计 + 3 个 KPI + TPT 分析 + 自定义报表/导出） |
 | **公告管理（PS-003，公告富文本）** | **完成** | 需求 3.0 的公告从「只读、纯文本」补成完整管理：`announcement:manage` 后台页（新增/编辑/发布/下架/软删）+ 正文改**富文本**（TipTap 编辑器 + jsoup 白名单净化 + 首页抽屉 `v-html`）；V21 把历史纯文本公告转成 HTML。API 64 项 + UI 17 项 |
-| **2.12 知识中心** | **完成** | 需求 3.11：`knowledge_article` 扩 4 列 + `knowledge_category` 字典 + `knowledge:manage`（V20）；后端 `knowledge` 模块；前端文档库（分类分组 / 筛选计数 / 关键词检索 / 下载 / PDF·图片预览 / 管理员维护 + 附件）。API 68 项 + UI 34 项。**经验分享（标签/订阅/模糊检索）按需求 1.5 一期排除** |
+| **2.12 知识中心** | **完成** | 需求 3.11：`knowledge_article` 扩 4 列 + `knowledge_category` 字典 + `knowledge:manage`（V20）；后端 `knowledge` 模块；前端文档库（分类分组 / 筛选计数 / 关键词检索 / 下载 / 预览 / 管理员维护 + 附件）。API 68 项 + UI 41 项。**在线预览已覆盖 Office**（docx/xlsx/pptx 客户端渲染，见下）。经验分享（标签/订阅/模糊检索）按需求 1.5 一期排除 |
+| **知识中心 Office 在线预览**（2026-10-15） | **完成** | docx/xlsx/pptx **在浏览器内解析渲染**（`docx-preview` / `read-excel-file` / `pptx-preview`，均懒加载），**零服务器依赖、文件不出客户端**；PDF/图片仍走新标签页；老格式 `doc/xls/ppt` 只能下载（客户端无库可解，如实提示）。无后端改动。新增 `DocumentPreviewDialog.vue` + `attachmentApi.fetchBlob` |
 
 **2.9/2.10 刻意偏离原型的四处**（交付时须说明）：① 公告无「置顶」徽标（`system_announcement` 无置顶列）；② 公告抽屉无附件；③ ~~待审批报告尚未单列~~ **已于 2026-10-14 遗留清理中接线**（`report_8d.approval_status` = DRAFT/PENDING/APPROVED/REJECTED，`approval_task` 记录审批人，「待审批报告」按**审批人**归属）；④ 台账「流程类型」列与筛选**已删**——`complaint.process_type` 恒为 `'8D'`，原型那四个中文字流类型在真实系统无数据支撑。
 
@@ -231,5 +232,7 @@ qms-app/
 21. **Spring Boot 3.4.1 的父 POM 并不管理 `org.jsoup:jsoup` 的版本**（它管 `tika`、`pdfbox` 等，但 jsoup 要从 BOM 外自己钉）。`<dependency>` 不写 `<version>` 会在**读 POM 阶段**就报 `'dependencies.dependency.version' ... is missing`。加 jsoup 时要配 `${jsoup.version}`。**教训：别假设「Spring Boot 管所有常见依赖的版本」，第一次构建就会告诉你。**
 22. **`$home` 是 PowerShell 的保留自动变量**（= 用户主目录），脚本里 `$home = ...` 会抛 `VariableNotWritable` 而**不终止**（`$ErrorActionPreference='Continue'`），于是 `$home` 仍是主目录字符串，`@($home | Where-Object {...})` 的断言**静默假成立/假失败**（本轮两条首页公告断言就是这样被歪掉的）。给列表变量起名避开 `$home`/`$input`/`$args` 等保留名（用 `$homeList`）。
 23. **富文本正文用 `v-html` 渲染时**：① scoped 样式**不作用于 `v-html` 子节点**，块级样式要写 `.ann-body :deep(p){}`；② 旧的 `white-space: pre-wrap` 必须去掉（否则每个标签边界多一个空行）；③ 写入侧必须净化（`HtmlSanitizer`），读取侧**不要**再洗一遍，否则列序/引号被规范化、字节往返断言必挂。另：`Safelist` 里漏掉 `<p>` 会让 TipTap 的每个段落存成空。
+24. **Office 客户端预览（`DocumentPreviewDialog`）三件事**：① 三个渲染器（`docx-preview`/`read-excel-file`/`pptx-preview`）**只在打开预览时 `import()`**（`e2e/lazy-load.mjs` 有断言守着，登录/知识中心首屏不含它们）；② `el-dialog` 用 `destroy-on-close` 时，正文在开启动画后才挂载——**渲染要在 `@opened` 里做**，不能 `watch(modelValue)` 里同步渲染（宿主 DOM 还不存在）；③ `pptx-preview` **无 `types`/`exports` 字段**，要在 `env.d.ts` 加 `declare module 'pptx-preview'` 否则 `vue-tsc` 失败。另：`read-excel-file` v9 的默认导出返回 **`Sheet[]`（`{sheet,data}`）**，不是 `Row[]`；文档渲染出的是**真实 DOM**（非 `v-html`），渲染后要**净化 `<a>`**（去掉 `javascript:` 等），scoped 样式对内部要 `:deep()`。
+25. **表格操作列改成图标按钮（`RowAction.vue`）时**：① 按钮上必须带 **`data-act` 钩子**——原来 7 个 `e2e/*.mjs` 用 `clickText('编辑')` 按**文字**点按钮，图标化后文字没了，全部要改成按 `data-act` 点击（本轮一次改齐 15 处，并给各脚本加了 `clickAct()` 助手）；② 图标按钮要带 **`aria-label`**，只有浮窗对键盘/读屏不可达；③ `el-tooltip` **包一个 `<span>` 再包 `<button>`**——`disabled` 的按钮会吞掉自己的 hover，浮窗就不显示了（D8 未批准的「发送」正靠这条才有提示）；④ 图标 22px（与既有 `.file-act` 一致）才能让 **4 个图标塞进 120px 列宽**（24px 就放不下）；⑤ **`fixed="right"` 会渲染两份**，测试点击必须过滤 `offsetParent !== null`。
 
 > 相关记忆文件：`~/.claude/projects/C--Users-Vivien-ma/memory/reference_qms_app_workspace.md`（阶段进度、脚本清单、全部踩坑、D5–D8 设计决策）。

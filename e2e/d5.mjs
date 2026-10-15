@@ -54,6 +54,21 @@ function note(name, ok, detail = '') {
   console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${name}${!ok && detail ? '  -> ' + detail : ''}`)
 }
 
+/** Clicks a row-action icon through its data-act hook. A fixed column renders a
+ *  hidden clone of the button, so the first visible one wins. */
+async function clickAct(act) {
+  const ok = await page.evaluate((a) => {
+    const el = Array.from(document.querySelectorAll(`[data-act="${a}"]`)).find(
+      (e) => e.offsetParent !== null
+    )
+    if (!el) return false
+    el.click()
+    return true
+  }, act)
+  await wait(700)
+  return ok
+}
+
 async function clickText(text, scope = 'body') {
   const ok = await page.evaluate(
     (t, s) => {
@@ -194,7 +209,7 @@ try {
   const actionId = idMatch ? idMatch[0] : null
 
   // --- edit it to "in progress" --------------------------------------------
-  if (!(await clickText('编辑'))) throw new Error('could not open the edit dialog')
+  if (!(await clickAct('edit'))) throw new Error('could not open the edit dialog')
   await wait(900)
   await selectByLabel('状态', '进行中')
   if (!(await clickText('保存', '.el-dialog'))) throw new Error('no save button while editing')
@@ -205,7 +220,7 @@ try {
   note('the edit is stored', afterEdit.includes('进行中'), 'the new status is not shown')
 
   // --- delete it ------------------------------------------------------------
-  if (!(await clickText('删除'))) throw new Error('no delete action')
+  if (!(await clickAct('delete'))) throw new Error('no delete action')
   await wait(700)
   if (!(await confirmMessageBox())) throw new Error('the delete confirmation did not appear')
   await wait(1500)

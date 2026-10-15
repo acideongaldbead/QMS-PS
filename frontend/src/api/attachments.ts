@@ -48,26 +48,27 @@ export const attachmentApi = {
 
   /**
    * The download endpoint needs the Authorization header, so a plain link will
-   * not do: fetch the bytes and hand the browser a blob URL instead.
+   * not do: every consumer fetches the bytes itself and then hands them to the
+   * browser -- a blob URL in a new tab, a download, or an in-page preview.
    */
+  fetchBlob: async (attachmentId: number): Promise<Blob> => {
+    const response = await http.get(`/attachments/${attachmentId}/download`, {
+      responseType: 'blob'
+    })
+    return response.data as Blob
+  },
+
   /**
    * Opens the file in a new tab, for the formats the browser renders itself.
-   * The download endpoint needs the Authorization header, so a plain link would
-   * arrive unauthenticated: the bytes are fetched and handed over as a blob URL.
    * The URL is deliberately not revoked -- the new tab owns it until it closes.
    */
   openInNewTab: async (attachmentId: number) => {
-    const response = await http.get(`/attachments/${attachmentId}/download`, {
-      responseType: 'blob'
-    })
-    window.open(window.URL.createObjectURL(response.data as Blob), '_blank')
+    const url = window.URL.createObjectURL(await attachmentApi.fetchBlob(attachmentId))
+    window.open(url, '_blank')
   },
 
   downloadAndSave: async (attachmentId: number, fileName: string) => {
-    const response = await http.get(`/attachments/${attachmentId}/download`, {
-      responseType: 'blob'
-    })
-    const url = window.URL.createObjectURL(response.data as Blob)
+    const url = window.URL.createObjectURL(await attachmentApi.fetchBlob(attachmentId))
     const link = document.createElement('a')
     link.href = url
     link.download = fileName

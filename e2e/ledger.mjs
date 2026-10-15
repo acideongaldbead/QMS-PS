@@ -66,6 +66,21 @@ page.on('response', (res) => {
   }
 })
 
+/** Clicks a row-action icon through its data-act hook. A fixed column renders a
+ *  hidden clone of the button, so the first visible one wins. */
+async function clickAct(act) {
+  const ok = await page.evaluate((a) => {
+    const el = Array.from(document.querySelectorAll(`[data-act="${a}"]`)).find(
+      (e) => e.offsetParent !== null
+    )
+    if (!el) return false
+    el.click()
+    return true
+  }, act)
+  await wait(700)
+  return ok
+}
+
 async function clickText(text, scope = 'body') {
   const ok = await page.evaluate(
     (t, s) => {
@@ -295,7 +310,7 @@ try {
   )
 
   // --- copy a complaint -----------------------------------------------------
-  if (!(await clickText('复制'))) throw new Error('no copy action on the row')
+  if (!(await clickAct('copy'))) throw new Error('no copy action on the row')
   await page.waitForFunction(() => /#\/complaints\/new/.test(window.location.hash), { timeout: 20000 })
   await wait(1800)
   await shot('11-copy')
@@ -317,7 +332,7 @@ try {
   await page.goto(`${base}/#/complaints`, { waitUntil: 'networkidle2', timeout: 40000 })
   await page.waitForSelector('.el-table__row', { timeout: 25000 })
   await wait(1200)
-  if (!(await clickText('查看'))) throw new Error('no view action on the row')
+  if (!(await clickAct('view'))) throw new Error('no view action on the row')
   await page.waitForFunction(() => /#\/complaints\/C\d+/.test(window.location.hash), { timeout: 20000 })
   await wait(1500)
   await shot('12-detail')

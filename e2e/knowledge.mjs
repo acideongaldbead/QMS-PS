@@ -37,6 +37,9 @@ const docA = Number(argv.docA ?? -1)
 const codeA = argv.codeA ?? ''
 const catA = argv.catA ?? ''
 const docB = Number(argv.docB ?? -1)
+const docxDoc = Number(argv.docxDoc ?? -1)
+const xlsxDoc = Number(argv.xlsxDoc ?? -1)
+const pptxDoc = Number(argv.pptxDoc ?? -1)
 const catProcess = argv.catProcess ?? ''
 const expectedTotal = Number(argv.total ?? -1)
 const keyword = argv.keyword ?? codeA
@@ -174,7 +177,6 @@ try {
   note('the page is titled in Chinese', chrome.includes('知识中心'), 'title missing')
   note('the document list is headed 全部文档', chrome.includes('全部文档'), 'card title missing')
   note('the category card is headed 文档分类', chrome.includes('文档分类'), 'sidebar title missing')
-  note('the maintenance-rules card is present', chrome.includes('维护规则'), 'rules card missing')
 
   // --- the sidebar ----------------------------------------------------------
   const catCodes = await page.evaluate(() =>
@@ -213,20 +215,6 @@ try {
     `zero-count categories=${emptyCats.join(',')}`
   )
 
-  // The two sidebar cards use the same heading markup; if they ever render
-  // differently, one of them has picked up a stray style.
-  const headingStyles = await page.evaluate(() =>
-    Array.from(document.querySelectorAll('aside .card-title')).map((el) => {
-      const style = getComputedStyle(el)
-      return `${style.color}|${style.fontWeight}|${style.fontSize}`
-    })
-  )
-  note(
-    'both sidebar headings share one text style',
-    headingStyles.length === 2 && headingStyles[0] === headingStyles[1],
-    headingStyles.join('  vs  ')
-  )
-
   // --- a seeded row ---------------------------------------------------------
   const seededRow = await page.evaluate((id) => {
     const row = document.querySelector(`.kb-row[data-doc="${id}"]`)
@@ -247,6 +235,89 @@ try {
     docB >= 0 && (await rowAction(page, docB, 'preview')) === 'disabled',
     'expected the preview button to be disabled'
   )
+
+  // --- Office documents preview in-page -------------------------------------
+  // Each format gets a real file and a real assertion: "claims to support" is not
+  // the same as "verified" (docs/retrospective.md 3.7-8). The bytes are parsed in
+  // the browser, so these assertions also prove the renderers actually load.
+  async function previewText() {
+    return page.evaluate(() => {
+      const el = document.querySelector('[data-doc-preview]')
+      return el ? el.innerText.replace(/\s+/g, ' ').trim() : ''
+    })
+  }
+  async function closePreview() {
+    await page.evaluate(() => document.querySelector('.el-dialog__headerbtn')?.click())
+    await wait(900)
+  }
+
+  // Word: the checked-in XTE-0071 template renders its own body text.
+  note('the Word document offers a preview', await clickRowAction(page, docxDoc, 'preview'), `row=${docxDoc}`)
+  await page.waitForSelector('[data-doc-preview]', { timeout: 20000 })
+  let docxRendered = true
+  try {
+    await page.waitForFunction(
+      () => !!document.querySelector('[data-doc-preview] .docx-wrapper'),
+      { timeout: 30000 }
+    )
+  } catch {
+    docxRendered = false
+  }
+  {
+    const text = await previewText()
+    note(
+      'the Word document renders its body',
+      docxRendered && text.replace(/\s+/g, '').includes('Read-across'),
+      text.slice(0, 200)
+    )
+  }
+  await wait(700)
+  await shot(page, '10-preview-docx')
+  await closePreview()
+
+  // Excel: a real POI workbook; its first header cell is 流程ID.
+  note('the Excel document offers a preview', await clickRowAction(page, xlsxDoc, 'preview'), `row=${xlsxDoc}`)
+  await page.waitForSelector('[data-doc-preview]', { timeout: 20000 })
+  let xlsxRendered = true
+  try {
+    await page.waitForFunction(
+      () => !!document.querySelector('[data-doc-preview] [data-doc-sheet-table]'),
+      { timeout: 30000 }
+    )
+  } catch {
+    xlsxRendered = false
+  }
+  {
+    const text = await previewText()
+    const rows = await page.evaluate(
+      () => document.querySelectorAll('[data-doc-preview] [data-doc-sheet-table] tr').length
+    )
+    note('the Excel document renders a table', xlsxRendered && rows >= 1, `rows=${rows}`)
+    note('the Excel table shows the ledger header', text.includes('流程ID'), text.slice(0, 200))
+  }
+  await wait(700)
+  await shot(page, '11-preview-xlsx')
+  await closePreview()
+
+  // PowerPoint: the generated fixture's slide carries a known title run.
+  note('the PowerPoint document offers a preview', await clickRowAction(page, pptxDoc, 'preview'), `row=${pptxDoc}`)
+  await page.waitForSelector('[data-doc-preview]', { timeout: 20000 })
+  let pptxRendered = true
+  try {
+    await page.waitForFunction(
+      () => (document.querySelector('[data-doc-preview]')?.innerText ?? '').includes('PPTX PREVIEW'),
+      { timeout: 30000 }
+    )
+  } catch {
+    pptxRendered = false
+  }
+  {
+    const text = await previewText()
+    note('the PowerPoint deck renders its slide text', pptxRendered && text.includes('PPTX PREVIEW'), text.slice(0, 200))
+  }
+  await wait(700)
+  await shot(page, '12-preview-pptx')
+  await closePreview()
 
   // --- category filter ------------------------------------------------------
   await pickCategory(page, catA)

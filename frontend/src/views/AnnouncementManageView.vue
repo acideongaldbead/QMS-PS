@@ -11,6 +11,7 @@ import {
 } from '@/api/announcements'
 import { useAuthStore } from '@/stores/auth'
 import QmsIcon from '@/components/QmsIcon.vue'
+import RowAction from '@/components/RowAction.vue'
 import RichTextEditor from '@/components/RichTextEditor.vue'
 
 /**
@@ -248,33 +249,26 @@ onMounted(load)
             </template>
           </el-table-column>
 
-          <el-table-column :label="t('common.actions')" width="208">
+          <el-table-column :label="t('common.actions')" width="122">
             <template #default="{ row }">
-              <span class="ann-actions">
-                <el-button link type="primary" data-act="edit" @click="openEdit(row)">
-                  {{ t('ann.edit') }}
-                </el-button>
-                <el-button
+              <span class="row-acts">
+                <RowAction act="edit" icon="pencil" :label="t('ann.edit')" @click="openEdit(row)" />
+                <RowAction
                   v-if="row.publishStatus !== PUBLISHED"
-                  link
-                  type="success"
-                  data-act="publish"
+                  act="publish"
+                  icon="upload"
+                  :label="row.publishStatus === RETIRED ? t('ann.republish') : t('ann.publish')"
                   @click="publish(row)"
-                >
-                  {{ row.publishStatus === RETIRED ? t('ann.republish') : t('ann.publish') }}
-                </el-button>
-                <el-button
+                />
+                <RowAction
                   v-if="row.publishStatus === PUBLISHED"
-                  link
-                  type="warning"
-                  data-act="retire"
+                  act="retire"
+                  icon="arrowRightFromLine"
+                  tone="warning"
+                  :label="t('ann.retire')"
                   @click="retire(row)"
-                >
-                  {{ t('ann.retire') }}
-                </el-button>
-                <el-button link type="danger" data-act="delete" @click="remove(row)">
-                  {{ t('ann.del') }}
-                </el-button>
+                />
+                <RowAction act="delete" icon="trash" tone="danger" :label="t('ann.del')" @click="remove(row)" />
               </span>
             </template>
           </el-table-column>
@@ -332,12 +326,6 @@ onMounted(load)
 </template>
 
 <style scoped>
-.ann-actions {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--sp-1);
-}
-
 .ann-field,
 .ann-editor-wrap {
   width: 100%;

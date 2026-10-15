@@ -59,6 +59,21 @@ function isoToday() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
+/** Clicks a row-action icon through its data-act hook. A fixed column renders a
+ *  hidden clone of the button, so the first visible one wins. */
+async function clickAct(act) {
+  const ok = await page.evaluate((a) => {
+    const el = Array.from(document.querySelectorAll(`[data-act="${a}"]`)).find(
+      (e) => e.offsetParent !== null
+    )
+    if (!el) return false
+    el.click()
+    return true
+  }, act)
+  await wait(700)
+  return ok
+}
+
 async function clickText(text, scope = 'body') {
   const ok = await page.evaluate(
     (t, s) => {
@@ -228,7 +243,7 @@ try {
   note('both verifications are kept as history', (await verificationRowCount()) === 2, `rows=${await verificationRowCount()}`)
 
   // --- delete one verification ---------------------------------------------
-  if (!(await clickText('删除'))) throw new Error('no delete action on a verification row')
+  if (!(await clickAct('delete'))) throw new Error('no delete action on a verification row')
   await wait(700)
   if (!(await confirmMessageBox())) throw new Error('the delete confirmation did not appear')
   await wait(1500)

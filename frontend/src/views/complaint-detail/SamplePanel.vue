@@ -5,6 +5,7 @@ import { complaintApi, type SampleForm } from '@/api/complaints'
 import { errorMessage } from '@/api/http'
 import { useMetaStore } from '@/stores/meta'
 import SampleFields from '@/components/SampleFields.vue'
+import RowAction from '@/components/RowAction.vue'
 
 /**
  * The complaint's samples. Registration can create them up front, but parts often
@@ -142,8 +143,10 @@ const rows = computed(() => props.samples)
       </el-table-column>
       <el-table-column v-if="canEdit" label="操作" width="120" fixed="right">
         <template #default="{ row }">
-          <el-button link type="primary" @click="openEdit(row.sampleId, row.value)">编辑</el-button>
-          <el-button link type="danger" @click="remove(row.sampleId)">删除</el-button>
+          <span class="row-acts">
+            <RowAction act="edit" icon="pencil" label="编辑" @click="openEdit(row.sampleId, row.value)" />
+            <RowAction act="delete" icon="trash" tone="danger" label="删除" @click="remove(row.sampleId)" />
+          </span>
         </template>
       </el-table-column>
     </el-table>

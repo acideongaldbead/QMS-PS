@@ -207,7 +207,7 @@ try {
   const removed = await page.evaluate(() => {
     const rows = document.querySelectorAll('.el-dialog .el-table__row')
     const last = rows[rows.length - 1]
-    const btn = Array.from(last.querySelectorAll('button')).find((b) => b.textContent.includes('移除'))
+    const btn = last.querySelector('[data-act="remove"]')
     if (!btn) return false
     btn.click()
     return true

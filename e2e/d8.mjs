@@ -99,6 +99,21 @@ async function openD8Tab() {
   await wait(1400)
 }
 
+/** Clicks a row-action icon through its data-act hook. A fixed column renders a
+ *  hidden clone of the button, so the first visible one wins. */
+async function clickAct(act) {
+  const ok = await page.evaluate((a) => {
+    const el = Array.from(document.querySelectorAll(`[data-act="${a}"]`)).find(
+      (e) => e.offsetParent !== null
+    )
+    if (!el) return false
+    el.click()
+    return true
+  }, act)
+  await wait(700)
+  return ok
+}
+
 async function clickText(text, scope = 'body') {
   const ok = await page.evaluate(
     (t, s) => {
@@ -188,7 +203,7 @@ try {
   note('the report is generated and listed', !!idMatch, 'no report id on the page')
   const reportId = idMatch ? idMatch[0] : null
 
-  if (!(await clickText('提交审批'))) throw new Error('no submit-for-approval action')
+  if (!(await clickAct('submit'))) throw new Error('no submit-for-approval action')
   await wait(900)
   await pickSelectIn('.el-dialog', 0, APPROVER_NAME)
   await shot('3-submit-dialog')
@@ -202,17 +217,18 @@ try {
   // --- 2. sales quality finds the send blocked ------------------------------
   await signIn(sales)
   await openD8Tab()
-  // The panel's hint text also says "发送", so count the action itself.
-  const sendActions = await page.evaluate(
-    () =>
-      Array.from(document.querySelectorAll('button')).filter(
-        (b) => b.textContent.trim() === '发送' && b.offsetParent !== null
-      ).length
-  )
-  note('an unapproved report offers no send action', sendActions === 0, `buttons=${sendActions}`)
+  // The send action stays visible but disabled until the report is approved, so
+  // the owner can see what is missing rather than wonder where the button went.
+  const sendDisabled = await page.evaluate(() => {
+    const el = Array.from(document.querySelectorAll('[data-act="send"]')).find(
+      (e) => e.offsetParent !== null
+    )
+    return el ? el.disabled : null
+  })
+  note('an unapproved report disables the send action', sendDisabled === true, `send disabled=${sendDisabled}`)
   await shot('4-blocked')
 
-  if (!(await clickText('查看报告'))) throw new Error('no view-report link')
+  if (!(await clickAct('viewReport'))) throw new Error('no view-report link')
   await wait(2000)
   await shot('5-report')
   const reportText = await page.evaluate(() => document.body.innerText)
@@ -254,7 +270,7 @@ try {
   await signIn(approver)
   await openD8Tab()
   await shot('7-approver')
-  if (!(await clickText('审批'))) throw new Error('the approver has no approve action')
+  if (!(await clickAct('approve'))) throw new Error('the approver has no approve action')
   await wait(900)
   const approveDialog = await page.evaluate(() => document.body.innerText)
   note('the approval dialog asks for a decision', approveDialog.includes('审批结论'))
@@ -270,7 +286,7 @@ try {
   await signIn(sales)
   await openD8Tab()
   // The report page is reached through the row action; the send link lives there.
-  if (!(await clickText('查看报告'))) throw new Error('no view-report link after approval')
+  if (!(await clickAct('viewReport'))) throw new Error('no view-report link after approval')
   await wait(1800)
   if (!(await clickText('发送报告'))) throw new Error('no send link on the report page')
   await wait(2000)

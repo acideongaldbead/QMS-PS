@@ -1029,6 +1029,22 @@
 .file-act button:hover { background: var(--n-150); color: var(--t-1); }
 .file-act svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 
+/* Row actions: a table's 操作 column. Icon-only (RowAction.vue); the action's
+   name lives in the hover tooltip, so four actions still fit on one line. */
+.row-acts { display: inline-flex; align-items: center; gap: 2px; }
+.row-act-wrap { display: inline-flex; }
+.row-act {
+  width: 22px; height: 22px; border-radius: var(--r-1);
+  display: grid; place-items: center; color: var(--t-3);
+}
+.row-act:hover { background: var(--bg-hover); color: var(--t-1); }
+.row-act:disabled { opacity: .45; cursor: not-allowed; }
+.row-act:disabled:hover { background: none; color: var(--t-3); }
+.row-act svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.row-act.is-primary { color: var(--c-primary); }
+.row-act.is-danger { color: #B91C1C; }
+.row-act.is-warning { color: #B45309; }
+
 /* ==========================================================================
    15. 时间轴
    ========================================================================== */

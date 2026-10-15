@@ -129,8 +129,45 @@ $up = Invoke-Upload -Url ($BaseUrl + '/api/attachments') -Token $token -FilePath
     -FileName 'manual.png' -BizType 'KnowledgeArticle' -BizId ([string]$docA.articleId)
 if (-not $up.attachment.attachmentId) { throw 'seeding the document file failed' }
 
+# --- real Office files for the in-page preview checks ------------------------
+# The .docx is the checked-in XTE-0071 template, the .xlsx is a real POI workbook
+# from the ledger export, and the .pptx is generated once by e2e/make-fixtures.mjs.
+$docxPath = Join-Path $cfg.root 'docs\templates\XTE-0071.docx'
+$pptxPath = Join-Path $cfg.root 'e2e\fixtures\preview-sample.pptx'
+$xlsxPath = Join-Path $outDir 'kb-ledger.xlsx'
+if (-not (Test-Path $docxPath)) { throw ('missing docx fixture: ' + $docxPath) }
+if (-not (Test-Path $pptxPath)) { throw ('missing pptx fixture: ' + $pptxPath + ' (run e2e/make-fixtures.mjs)') }
+Invoke-WebRequest -Uri ($BaseUrl + '/api/complaints/export') -Method Get `
+    -Headers @{ Authorization = 'Bearer ' + $token } -OutFile $xlsxPath -UseBasicParsing | Out-Null
+if (-not (Test-Path $xlsxPath)) { throw 'the ledger export produced no file' }
+
+$docxDoc = (Api 'POST' '/api/knowledge/articles' $token @{
+    title = 'Acceptance Word ' + $stamp; category = $catA
+    docCode = 'UIKB-DOCX-' + $stamp; summary = 'Seeded with a real .docx'
+}).body
+$docxUp = Invoke-Upload -Url ($BaseUrl + '/api/attachments') -Token $token -FilePath $docxPath `
+    -FileName 'XTE-0071.docx' -BizType 'KnowledgeArticle' -BizId ([string]$docxDoc.articleId)
+if (-not $docxUp.attachment.attachmentId) { throw 'uploading the word file failed' }
+
+$xlsxDoc = (Api 'POST' '/api/knowledge/articles' $token @{
+    title = 'Acceptance Excel ' + $stamp; category = $catA
+    docCode = 'UIKB-XLSX-' + $stamp; summary = 'Seeded with a real .xlsx'
+}).body
+$xlsxUp = Invoke-Upload -Url ($BaseUrl + '/api/attachments') -Token $token -FilePath $xlsxPath `
+    -FileName 'complaint-ledger.xlsx' -BizType 'KnowledgeArticle' -BizId ([string]$xlsxDoc.articleId)
+if (-not $xlsxUp.attachment.attachmentId) { throw 'uploading the excel file failed' }
+
+$pptxDoc = (Api 'POST' '/api/knowledge/articles' $token @{
+    title = 'Acceptance PowerPoint ' + $stamp; category = $catB
+    docCode = 'UIKB-PPTX-' + $stamp; summary = 'Seeded with a real .pptx'
+}).body
+$pptxUp = Invoke-Upload -Url ($BaseUrl + '/api/attachments') -Token $token -FilePath $pptxPath `
+    -FileName 'preview-sample.pptx' -BizType 'KnowledgeArticle' -BizId ([string]$pptxDoc.articleId)
+if (-not $pptxUp.attachment.attachmentId) { throw 'uploading the pptx file failed' }
+
 $summary = (Api 'GET' '/api/knowledge/summary' $token $null).body
-[Console]::Out.WriteLine('kb data: total=' + $summary.total + ' docA=' + $docA.articleId + ' docB=' + $docB.articleId)
+[Console]::Out.WriteLine('kb data: total=' + $summary.total + ' docA=' + $docA.articleId + ' docB=' + $docB.articleId `
+    + ' docx=' + $docxDoc.articleId + ' xlsx=' + $xlsxDoc.articleId + ' pptx=' + $pptxDoc.articleId)
 
 $e2e = Join-Path $cfg.root 'e2e'
 $edge = @(
@@ -150,6 +187,9 @@ $nodeArgs = @(
     ('--codeA=' + $codeA),
     ('--catA=' + $catA),
     ('--docB=' + $docB.articleId),
+    ('--docxDoc=' + $docxDoc.articleId),
+    ('--xlsxDoc=' + $xlsxDoc.articleId),
+    ('--pptxDoc=' + $pptxDoc.articleId),
     ('--catProcess=' + $catAForBrowser),
     ('--keyword=' + $codeA),
     ('--total=' + $summary.total),

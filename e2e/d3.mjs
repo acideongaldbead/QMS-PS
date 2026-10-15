@@ -54,6 +54,21 @@ const page = await context.newPage()
 await page.setViewport({ width: 1680, height: 1080 })
 const wait = (ms) => new Promise((r) => setTimeout(r, ms))
 
+/** Clicks a row-action icon through its data-act hook. A fixed column renders a
+ *  hidden clone of the button, so the first visible one wins. */
+async function clickAct(act) {
+  const ok = await page.evaluate((a) => {
+    const el = Array.from(document.querySelectorAll(`[data-act="${a}"]`)).find(
+      (e) => e.offsetParent !== null
+    )
+    if (!el) return false
+    el.click()
+    return true
+  }, act)
+  await wait(700)
+  return ok
+}
+
 async function clickText(text, scope = 'body') {
   const ok = await page.evaluate(
     (t, s) => {
@@ -187,7 +202,7 @@ try {
   note('the owner name is resolved', afterCreate.includes('赵敏'))
 
   // --- complete it and check the completion date ---------------------------
-  if (!(await clickText('编辑'))) throw new Error('could not open the edit dialog')
+  if (!(await clickAct('edit'))) throw new Error('could not open the edit dialog')
   await wait(900)
   await pickSelectIn('.el-dialog', 1, '已完成')
   const resultBox = await page.$('.el-dialog textarea')

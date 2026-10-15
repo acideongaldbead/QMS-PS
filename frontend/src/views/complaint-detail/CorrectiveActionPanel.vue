@@ -10,6 +10,7 @@ import {
 } from '@/api/actions'
 import { rootCauseApi, type RootCauseView } from '@/api/rootCause'
 import { errorMessage } from '@/api/http'
+import RowAction from '@/components/RowAction.vue'
 import { useMetaStore } from '@/stores/meta'
 
 /**
@@ -177,8 +178,10 @@ function statusTagType(code: string): string {
       </el-table-column>
       <el-table-column v-if="canEdit" label="操作" width="120" fixed="right">
         <template #default="{ row }">
-          <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
-          <el-button link type="danger" @click="remove(row)">删除</el-button>
+          <span class="row-acts">
+            <RowAction act="edit" icon="pencil" label="编辑" @click="openEdit(row)" />
+            <RowAction act="delete" icon="trash" tone="danger" label="删除" @click="remove(row)" />
+          </span>
         </template>
       </el-table-column>
     </el-table>
