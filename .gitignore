@@ -15,6 +15,9 @@ npm-debug.log*
 # --- local toolchain & downloads (never commit) ---
 tools/
 config/.env
+# Every variant carries the database password and the JWT key, backups included
+# (a key rotation writes config/.env.bak-<stamp>, which the plain rule missed).
+config/.env.*
 config/application-prod.yml
 
 # --- runtime data ---
