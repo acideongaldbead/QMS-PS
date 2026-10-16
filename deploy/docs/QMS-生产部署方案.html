@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta charset="utf-8">
+<title>QMS 生产部署方案</title>
+<style>
+  body { font-family: "Microsoft YaHei", "微软雅黑", SimSun, sans-serif; font-size: 10.5pt; line-height: 1.65; color: #1a1a1a; margin: 2.2cm 2.0cm; }
+  h1 { font-size: 20pt; color: #123a5e; border-bottom: 2px solid #123a5e; padding-bottom: 6px; margin-bottom: 4px; }
+  h2 { font-size: 14pt; color: #123a5e; border-left: 5px solid #2f7ac0; padding-left: 8px; margin-top: 22px; margin-bottom: 8px; }
+  h3 { font-size: 11.5pt; color: #1f4e79; margin-top: 16px; margin-bottom: 6px; }
+  p { margin: 6px 0; }
+  ul, ol { margin: 6px 0 6px 0; padding-left: 24px; }
+  li { margin: 3px 0; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 10pt; }
+  th, td { border: 1px solid #9bb4c9; padding: 6px 9px; text-align: left; vertical-align: top; }
+  th { background: #e8f1f8; font-weight: bold; }
+  code { font-family: Consolas, "Courier New", monospace; background: #f2f4f7; padding: 1px 4px; font-size: 9.5pt; color: #a3311f; }
+  pre { font-family: Consolas, "Courier New", monospace; background: #f7f9fb; border: 1px solid #ccd8e2; padding: 10px 12px; font-size: 9pt; line-height: 1.45; white-space: pre; }
+  .meta { color: #555; font-size: 10pt; margin-bottom: 14px; }
+  .meta div { margin: 2px 0; }
+  .note { background: #fff8e6; border-left: 4px solid #e0a800; padding: 8px 12px; margin: 10px 0; }
+  .done { color: #1a7f37; font-weight: bold; }
+  .todo { color: #b3541e; font-weight: bold; }
+  hr { border: none; border-top: 1px solid #d5dee6; margin: 18px 0; }
+</style>
+</head>
+<body>
+
+<h1>QMS 生产部署方案</h1>
+<div class="meta">
+  <div><strong>适用系统</strong>：QMS 问题解决管理系统（8D）</div>
+  <div><strong>部署形态</strong>：Windows Server 原生部署 · 应用与数据库分离 · HTTPS</div>
+  <div><strong>文档日期</strong>：2026-10-16</div>
+  <div><strong>状态</strong>：方案已批准；阶段 A（应用侧改造）已完成，阶段 B/C/D 待实施</div>
+</div>
+
+<hr>
+
+<h2>1. 背景与目标</h2>
+<p>QMS 已在本机跑通完整 8D 闭环（数据库迁移 V1–V21，API 断言 738 项、UI 断言 209 项全部通过）。本机目前的运行方式完全是为开发者准备的，直接搬到服务器<strong>不可用</strong>。已核实的事实：</p>
+<ul>
+  <li>单 fat jar <code>qms-api.jar</code>（约 70 MB），前端 <code>dist</code> 与数据库迁移脚本都打进 jar；前端用 hash 路由 + 相对 <code>/api</code> 路径，所以<strong>不需要 nginx，也不需要 CORS</strong>。</li>
+  <li>监听 <strong>8080 明文 HTTP</strong>；配置只来自 <code>config\.env</code>，以<strong>进程级</strong>环境变量注入。</li>
+  <li>启动方式是 <code>Start-Process java -jar</code>（隐藏窗口），是<strong>登录会话的子进程</strong>。</li>
+  <li><strong>没有</strong> Windows 服务、<strong>没有</strong> TLS、<strong>没有</strong>生产 profile 配置文件、<strong>没有</strong>部署文档。</li>
+  <li><code>application.yml</code> 里烤死了 <code>spring.profiles.active: local</code>，且 JWT 密钥带有开发用默认值。</li>
+  <li>迁移 V1–V21 由 Flyway 启动时自动执行；其中 <strong>V9 是生产必需主数据</strong>，9 个账号的口令是 <code>CHANGE_ME</code> 哨兵值，<strong>生产环境下无法登录</strong>。</li>
+  <li>唯一绝对路径硬编码：8D 报告 PDF 的中文字体回退到 <code>C:/Windows/Fonts/{simhei,msyh,Deng}.ttf</code>，<strong>字体缺失时导出 PDF 直接报错</strong>。</li>
+  <li>脚本目录里的路径配置全是开发机绝对路径，服务器安装不能依赖它。</li>
+  <li><strong>无任何启动期外部网络调用</strong>（杀毒、邮件仅在对应 provider 开启时按需连接）→ 适合离线部署。</li>
+</ul>
+<p><strong>目标</strong>：产出一套可重复执行的安装脚本 + 离线部署包 + 部署/运维/回滚手册，让运维能在一台干净的 Windows Server 上完成安装，其他同事用浏览器经 HTTPS 访问。</p>
+
+<h2>2. 已确认的决策</h2>
+<table>
+  <tr><th style="width:22%">决策项</th><th>结论</th></tr>
+  <tr><td>部署拓扑</td><td><strong>应用与数据库分离</strong>（应用服务器 + 独立数据库服务器）</td></tr>
+  <tr><td>服务化</td><td><strong>注册为 Windows 服务</strong>（开机自启、崩溃自动重启）</td></tr>
+  <tr><td>传输安全</td><td><strong>Spring Boot 自带 HTTPS</strong>（应用直接监听 8443，不前置反向代理）</td></tr>
+  <tr><td>交付形态</td><td><strong>安装脚本 + 离线部署包 + 部署/运维/回滚手册</strong></td></tr>
+  <tr><td>DevOps 平台</td><td>一期<strong>不引入</strong>（公司 CI/CD 标准待向 IT 确认，二期再定）</td></tr>
+  <tr><td>变更管理</td><td>走<strong>简化流程</strong>（登记 + 备份，不出正式工单）</td></tr>
+</table>
+
+<h2>3. 目标架构</h2>
+<pre>
+同事浏览器（内网）
+      │  HTTPS :8443   TLS 1.2/1.3
+      ▼
+[应用服务器 Windows Server]   Windows 服务 "QMS"（WinSW 托管，开机自启 / 崩溃重启）
+      │   C:\QMS\app\qms-api.jar            profile=prod + 外部配置
+      │   C:\QMS\config\application-prod.yml
+      │   C:\QMS\certs\qms.p12
+      │   C:\QMS\data\attachments           C:\QMS\logs
+      │  TCP :5432  密码认证 (scram-sha-256)
+      ▼
+[数据库服务器]  PostgreSQL 18   →   库 qms / schema qms / 专用角色 qms_app
+</pre>
+<p>一期为<strong>单应用实例</strong>（仅数据库分离）。多实例需要共享附件存储，<strong>明确不做</strong>。</p>
+
+<h2>4. 前提条件</h2>
+
+<h3>4.1 应用服务器</h3>
+<table>
+  <tr><th style="width:18%">项</th><th>要求</th></tr>
+  <tr><td>操作系统</td><td>Windows Server 2019 / 2022，或 Windows 10/11 <strong>专业版</strong>（x64）</td></tr>
+  <tr><td>权限</td><td>安装期需要<strong>本地管理员</strong></td></tr>
+  <tr><td>硬件</td><td>≥ 4 vCPU / ≥ 8 GB 内存；系统盘外 ≥ 100 GB（附件持续增长）</td></tr>
+  <tr><td>网络</td><td><strong>固定 IP + DNS 名</strong>（证书 SAN 需要）；入站 <strong>TCP 8443</strong> 放通</td></tr>
+  <tr><td>JDK</td><td><strong>JDK 21</strong>（离线包内置 Temurin 21，或安装 MSI）；服务以<strong>绝对路径</strong>引用 <code>java.exe</code></td></tr>
+  <tr><td>中文字体</td><td>8D 报告 PDF 需要中文字体。<strong>优先依赖服务器自带的 Windows 字体</strong>（<code>simhei.ttf</code> / <code>Deng.ttf</code>），无需额外动作；缺失时（英文版 Windows Server 常见）才随包附<strong>开源字体</strong>并配置 <code>QMS_REPORT_PDF_FONT</code>。详见 4.4</td></tr>
+  <tr><td>.NET</td><td>WinSW v2 需要 .NET Framework 4.6.1（Windows Server <strong>自带</strong>）</td></tr>
+  <tr><td>时钟</td><td>启用 NTP 同步（JWT 过期时间、审计时间依赖它）</td></tr>
+  <tr><td>外网</td><td><strong>不需要</strong>（走离线部署包）</td></tr>
+</table>
+
+<h3>4.2 数据库服务器</h3>
+<table>
+  <tr><th style="width:18%">项</th><th>要求</th></tr>
+  <tr><td>数据库</td><td>PostgreSQL <strong>18</strong>（已装或新装）</td></tr>
+  <tr><td>监听与认证</td><td><code>listen_addresses</code> 覆盖应用服务器可达地址；<code>pg_hba.conf</code> 放行应用服务器 IP + <code>scram-sha-256</code> 密码认证</td></tr>
+  <tr><td>库与角色</td><td>库 <code>qms</code>（<strong>UTF8</strong>）；<strong>专用角色 <code>qms_app</code>（非 postgres 超级用户）</strong>，拥有 <code>qms</code> schema（Flyway 首次建表需要 CREATE 权限）</td></tr>
+  <tr><td>磁盘</td><td>≥ 200 GB，另留独立备份空间</td></tr>
+</table>
+
+<h3>4.3 网络与凭据</h3>
+<ul>
+  <li>客户端 → 应用服务器：TCP <strong>8443</strong></li>
+  <li>应用服务器 → 数据库服务器：TCP <strong>5432</strong></li>
+  <li>需准备：<code>qms_app</code> 口令、JWT 密钥（<strong>≥ 32 字节随机</strong>）、管理员初始口令、证书口令</li>
+  <li>证书：公司 CA 签发的服务器证书（推荐）或自签证书（试运行）</li>
+</ul>
+
+<h3>4.4 报告 PDF 的中文字体（合规与格式约束）</h3>
+<p><strong>合规（重要）</strong>：<code>simhei.ttf</code>（黑体）、<code>msyh.ttc</code>（微软雅黑）等是随 Windows 授权给<strong>该台机器使用</strong>的商业字体，<strong>把字体文件复制进部署包分发到其他机器属于超授权范围</strong>。因此：</p>
+<ul>
+  <li><strong>首选</strong>：只配置路径，<strong>不复制文件</strong> —— 依赖目标服务器自带的 Windows 字体。系统装了就无需任何额外动作。</li>
+  <li><strong>必须随包携带时</strong>（目标机没有中文字体）：只使用<strong>可自由分发</strong>的开源字体，例如思源黑体 / Noto Sans CJK、霞鹜文楷（<strong>OFL 协议</strong>），并把字体自带的许可证文本一并放进 <code>fonts/</code>。</li>
+  <li><strong>绝不</strong>把 Windows 自带商业字体放进部署包。</li>
+</ul>
+<p><strong>格式约束（技术）</strong>：PDF 由 PDFBox 的 <code>PDType0Font.load</code> 生成，只接受<strong>单个、TrueType 轮廓（.ttf）</strong>的字体文件：</p>
+<table>
+  <tr><th style="width:24%">格式</th><th style="width:14%">能否使用</th><th>说明</th></tr>
+  <tr><td><code>.ttf</code>（TrueType 轮廓）</td><td>✅</td><td>唯一可用形态</td></tr>
+  <tr><td><code>.otf</code>（CFF 轮廓）</td><td>❌</td><td>PDFBox 无法嵌入 CFF 轮廓</td></tr>
+  <tr><td><code>.ttc</code>（字体集合）</td><td>❌</td><td>当前实现直接拒绝并提示改路径</td></tr>
+  <tr><td>可变字体（文件名带 <code>VF</code>）</td><td>⚠️</td><td>行为不确定，请改用<strong>静态字重</strong>版本</td></tr>
+</table>
+<p class="note"><strong>现状提示</strong>：现有回退列表里的 <code>msyh.ttf</code> 在 Windows 10/11 上<strong>已不存在</strong>（现为 <code>msyh.ttc</code>），因此实际可用的系统回退只有 <code>simhei.ttf</code> 与 <code>Deng.ttf</code> 两项。若目标服务器两者都没有，必须在部署包内提供开源 TTF 字体并设置 <code>QMS_REPORT_PDF_FONT</code> 指向其<strong>绝对路径</strong>。</p>
+
+<h2>5. 交付物</h2>
+<p><strong>离线部署包</strong> <code>qms-deploy-&lt;版本&gt;-&lt;日期&gt;.zip</code>（服务器无需外网）：</p>
+<pre>
+qms-deploy/
+  artifacts/  qms-api.jar                       # 构建产物
+              jdk21/                            # 内置 JDK（离线必需，可换 MSI）
+              winsw/qms-service.exe             # WinSW
+  templates/  application-prod.yml.template
+              qms-service.xml.template
+  bin/        check-prereqs.ps1   install-qms.ps1   uninstall-qms.ps1
+              upgrade-qms.ps1     new-cert.ps1      backup-qms.ps1
+              health-check.ps1    reset-password.ps1
+  sql/        db-init.sql                          # 建库 / 建角色 / 授权
+  fonts/      （仅当目标机缺中文字体时放入 OFL 开源字体 + 许可证文本；见 4.4）
+  docs/       部署手册.md  运维手册.md  回滚手册.md  前提条件核对表.md
+  SHA256SUMS.txt
+</pre>
+<p>全部 <code>.ps1</code> 遵循仓库既有约定：<strong>纯 ASCII 或 UTF-8 BOM</strong>（由 <code>_check-ps1-encoding.ps1</code> 守卫）、路径走<strong>命名参数</strong>、中文只出现在 <code>.md</code> / <code>.json</code>。</p>
+
+<h2>6. 需要新增 / 修改的内容</h2>
+
+<h3>A. 配置外部化 —— 无 Java 改动</h3>
+<ul>
+  <li>新增 <code>deploy/templates/application-prod.yml.template</code>，安装时渲染为 <code>C:\QMS\config\application-prod.yml</code>，集中全部生产配置。</li>
+  <li>启动参数：<code>--spring.profiles.active=prod --spring.config.additional-location=file:./config/</code>
+    <ul>
+      <li>命令行覆盖 jar 内烤死的 <code>local</code>；jar 里的 <code>application-local.yml</code>（含开发数据源与演示口令）<strong>不会加载</strong>。</li>
+      <li>外部配置是<strong>特定 profile 文件</strong>，优先级高于 jar 内 <code>application.yml</code>，因此可直接覆盖带默认值的属性。</li>
+    </ul>
+  </li>
+  <li>生产配置必填项：数据源 url/用户名/口令、<code>qms.jwt.secret</code>、<code>qms.storage.root</code>（<strong>绝对路径</strong>）、<code>server.ssl.*</code>、<code>server.shutdown: graceful</code>、邮件、杀毒、PDF 字体。</li>
+</ul>
+
+<h3>B. HTTPS —— 无 Java 改动</h3>
+<ul>
+  <li><code>server.port: 8443</code>、TLS 1.2/1.3、PKCS12 密钥库、<code>key-alias</code>。</li>
+  <li>生产<strong>只监听 8443</strong>，不再开 8080。</li>
+  <li><code>new-cert.ps1</code>：用 JDK 的 <code>keytool</code> 生成自签 PKCS12（<strong>SAN 必须含 DNS 名 + IP</strong>）；公司 CA 证书则提供导入 PFX 的手册步骤。</li>
+</ul>
+
+<h3>C. Windows 服务 —— WinSW（Spring Boot 官方文档推荐方式）</h3>
+<ul>
+  <li><code>qms-service.xml</code>：可执行文件指向 <code>java.exe</code> 绝对路径、参数带 <code>-jar</code> 与两个启动参数、工作目录设为安装根、<strong>自动启动 + 延迟自启</strong>（等数据库先起来）、<strong>失败自动重启 3 次</strong>、日志按大小时间滚动、停止超时、服务账号。</li>
+  <li>服务账号默认 <strong><code>NT AUTHORITY\LocalService</code></strong>（数据库走口令认证，不需要 Windows 身份；免密码、权限低）；公司有 AD 时也可换成<strong>域服务账号</strong>。</li>
+  <li>备选方案 <strong>NSSM</strong>（若运维更熟悉）。</li>
+</ul>
+
+<h3>D. 目录与 ACL</h3>
+<ul>
+  <li>建 <code>C:\QMS\{app,config,certs,data,logs,bin,docs}</code>。</li>
+  <li>授权：服务账号对 <code>data</code> / <code>logs</code> 为 <strong>修改</strong>，对 <code>app</code> / <code>config</code> / <code>certs</code> 为 <strong>读取</strong>；<code>config</code> 与 <code>certs</code> <strong>拒绝普通用户读取</strong>（仅服务账号 + Administrators）。</li>
+</ul>
+
+<h3>E. 日志轮转 —— 小改动</h3>
+<p>新增 <code>logback-spring.xml</code>：滚动文件 <code>logs\qms-app.log</code>（按天 + 按大小，保留 30 天）+ 独立错误文件（保留 90 天），保留控制台输出。</p>
+
+<h3>F. 账号初始化与口令 —— 唯一需要改 Java 的部分</h3>
+<p>生产不设演示口令，9 个账号停在 <code>CHANGE_ME</code> → <strong>无法登录</strong>。新增<strong>管理员口令 CLI</strong>：</p>
+<pre>java -jar qms-api.jar --qms.admin.set-password=&lt;用户名&gt;</pre>
+<p>口令从环境变量 <code>QMS_NEW_PASSWORD</code> 读取（<strong>不出现在命令行</strong>，因此不进进程列表与命令历史）。安装时用它设置管理员口令；它同时是运维<strong>重置口令</strong>的正式入口。</p>
+<p>另把 <code>application.yml</code> 的 <code>qms.jwt.secret</code> <strong>默认值去掉改为必填</strong>，杜绝"生产误用开发密钥"。</p>
+
+<h3>G. 部署脚本</h3>
+<table>
+  <tr><th style="width:30%">脚本</th><th>作用</th></tr>
+  <tr><td><code>check-prereqs.ps1</code></td><td>核对前提条件：OS / JDK / 字体 / 端口 / 目录 / 权限 / 到数据库的连通性</td></tr>
+  <tr><td><code>install-qms.ps1</code></td><td>分阶段 <code>-Stage Prepare/Service/Firewall/All</code>：建目录 + ACL → 落配置 → 装服务 → 防火墙规则 → 健康检查</td></tr>
+  <tr><td><code>uninstall-qms.ps1</code></td><td>停服务、卸载服务、保留数据（可选删除）</td></tr>
+  <tr><td><code>upgrade-qms.ps1</code></td><td>备份 → 停服务 → 换 jar → 启动 → 校验 → <strong>失败自动回滚</strong></td></tr>
+  <tr><td><code>new-cert.ps1</code></td><td>生成自签 PKCS12（含 SAN），或导入公司 PFX</td></tr>
+  <tr><td><code>backup-qms.ps1</code></td><td>备份附件目录（+ 提示数据库端 <code>pg_dump</code> 命令）</td></tr>
+  <tr><td><code>health-check.ps1</code></td><td>探测 <code>https://localhost:8443/actuator/health</code>（自签证书需忽略校验）</td></tr>
+  <tr><td><code>reset-password.ps1</code></td><td>包装第 F 项的口令 CLI</td></tr>
+</table>
+
+<h3>H. 文档</h3>
+<p><code>部署手册.md</code>（前提核对表 + 逐步命令 + 截图位）、<code>运维手册.md</code>（启停 / 日志 / 备份 / 监控 / 口令重置 / 账号开通）、<code>回滚手册.md</code>。</p>
+
+<h2>7. 部署步骤（安装手册主干）</h2>
+<ol>
+  <li>应用服务器跑 <code>check-prereqs.ps1</code>，按报告补齐。</li>
+  <li><strong>数据库服务器</strong>执行 <code>sql/db-init.sql</code>：建库 <code>qms</code>（UTF8）、建角色 <code>qms_app</code>、授权，并给出 <code>pg_hba.conf</code> 提示。</li>
+  <li>应用服务器解开离线包；<code>new-cert.ps1</code> 生成或导入证书。</li>
+  <li>由模板生成 <code>C:\QMS\config\application-prod.yml</code>（填数据库地址与口令、JWT 密钥、证书口令、附件路径、SMTP / 杀毒配置）。</li>
+  <li><code>install-qms.ps1 -Stage Prepare</code>：建目录 + ACL + 落配置。</li>
+  <li><code>install-qms.ps1 -Stage Service</code>：安装并启动服务。</li>
+  <li>查看日志，确认 Flyway 首次迁移到 <strong>V21</strong> 成功。</li>
+  <li><code>reset-password.ps1</code> 设置管理员口令；登录后在系统管理里开通其他账号。</li>
+  <li><code>install-qms.ps1 -Stage Firewall</code>：放通 8443。</li>
+  <li>冒烟：<code>health-check.ps1</code> + 浏览器登录 + 建单 + 传附件 + 导出 Word / PDF。</li>
+  <li><strong>重启服务器</strong>验证服务自启（这是"企业级"与"手工启动"的分水岭）。</li>
+</ol>
+
+<h2>8. 安全加固清单</h2>
+<ul>
+  <li>JWT 密钥必填且 ≥ 32 字节随机；数据库使用<strong>专用最小权限角色</strong>（非 <code>postgres</code> 超级用户）。</li>
+  <li><code>config</code> 与 <code>certs</code> 目录 ACL 收紧。</li>
+  <li>生产天然关闭开发数据源与演示口令（profile 隔离已做到）。</li>
+  <li>TLS 1.2/1.3，禁用弱协议；生产只开 8443。</li>
+  <li><code>/actuator/health</code> 与 <code>/actuator/info</code> 当前是<strong>匿名可访问</strong>（仅暴露 health/info，可接受）；如需进一步收敛可加 IP 白名单。</li>
+  <li>口令策略：登录失败 <strong>5 次锁定 15 分钟</strong>（系统已有）；管理员口令由安装方设定，<strong>不使用默认口令</strong>。</li>
+</ul>
+
+<h2>9. 运维：备份 / 升级 / 回滚 / 监控</h2>
+<ul>
+  <li><strong>备份</strong>：数据库端 <code>pg_dump</code>（计划任务，每日，保留多份）；应用端附件目录由 <code>backup-qms.ps1</code> 同步到备份共享；<code>config</code> 与 <code>certs</code> 单独加密留存。</li>
+  <li><strong>升级</strong>：<code>upgrade-qms.ps1</code> = 备份 → 停服务 → 换 jar → 启动 → 健康检查；Flyway 自动迁移。</li>
+  <li><strong>回滚</strong>：迁移<strong>只追加</strong>（全部是加列 / 加表），旧 jar 通常仍能跑新库，所以<strong>优先应用回滚</strong>（换回旧 jar）；稳妥回滚 = 还原升级前的数据库备份 + 换回旧 jar。</li>
+  <li><strong>监控</strong>：<code>/actuator/health</code> 由计划任务定时探测并告警；错误日志单独留一份便于值守。</li>
+  <li><strong>日志</strong>：应用日志轮转保留 30 天；服务包装器另有自己的日志，与应用日志分离（便于区分"启动失败"与"业务错误"）。</li>
+</ul>
+
+<h2>10. 发布管理与演进路线（迭代发布 / DevOps）</h2>
+
+<h3>版本与制品规范</h3>
+<ul>
+  <li>语义化版本 <code>MAJOR.MINOR.PATCH</code>；每次发布打 <strong>git tag</strong> + 维护 <code>CHANGELOG.md</code>。</li>
+  <li><strong>制品不可变</strong>：构建产出 <code>qms-api-&lt;版本&gt;.jar</code> + <code>SHA256</code>；<strong>只从制品库取，不在服务器上现场构建</strong>。</li>
+  <li>一期制品库 = 归档目录 / 只读共享；二期接 Nexus / Artifactory。</li>
+</ul>
+
+<h3>环境分级</h3>
+<p><code>DEV（开发）→ UAT（试运行，至少 1 台）→ PROD</code>。<strong>禁止 DEV 直连 PROD 库</strong>。</p>
+
+<h3>发布流程（脚本版，本期落地）</h3>
+<p>变更单 → 备份（数据库 dump + 附件）→ 停服 → 换 jar → 启服 → 健康检查 → 冒烟 → 归档。</p>
+
+<h3>数据库兼容原则（决定能否平滑回滚）</h3>
+<ul>
+  <li>Flyway <strong>只追加</strong>；<strong>只加列不删列</strong>；破坏性变更<strong>分两次发布</strong>（先加新列并用，下个版本再删旧列）。</li>
+  <li>发布前在<strong>临时库</strong>重放校验迁移脚本。</li>
+  <li>回滚优先应用回滚；数据回滚 = 还原备份（代价高，靠上面的兼容原则避免）。</li>
+</ul>
+
+<h3>演进路线</h3>
+<table>
+  <tr><th style="width:14%">阶段</th><th style="width:26%">触发条件</th><th>做什么</th><th style="width:16%">引入平台？</th></tr>
+  <tr><td>一（本期）</td><td>一期上线</td><td>脚本化发布 + 版本 / 制品规范 + UAT 试运行</td><td><strong>否</strong></td></tr>
+  <tr><td>二</td><td>有 UAT / 第二环境、团队 &gt;1 人</td><td>接<strong>公司既有 CI</strong>：自动构建 + 跑 947 条断言 + 制品入库 + 触发部署脚本</td><td>复用公司既有，<strong>不新引入</strong></td></tr>
+  <tr><td>三</td><td>多实例 / 合规要求高</td><td>容器化 + K8s，或 Ansible / Octopus 部署编排</td><td>视公司标准</td></tr>
+</table>
+<p><strong>平台选型原则</strong>：先问 IT <strong>公司现有标准栈</strong>，<strong>优先复用</strong>。猪齿鱼（Choerodon）、云效、CODING 属"团队级 DevOps 平台"，<strong>猪齿鱼本身跑在 K8s 上</strong>，对 Windows 原生单应用是过度设计，且会造成"第二套 DevOps"，安全 / 合规 / 运维都不认。<strong>故本期不引入。</strong></p>
+<p><strong>已具备的 CI 友好资产</strong>：可重复构建（Maven + npm）、<strong>947 条自动化断言</strong>、单 jar 制品、部署脚本 —— <strong>部署脚本就是流水线的最后一段</strong>，将来接入无需重构。</p>
+
+<h3>合规提醒（IATF 16949）</h3>
+<p>QMS 承载 8D，属 <strong>IATF 16949</strong> 要求的质量工具；OEM 客户审核会查<strong>审计追溯与数据留存</strong>。"变更可追溯、审计日志完整、备份可恢复"是<strong>合规要求</strong>，应纳入验收清单。</p>
+
+<h2>11. 验收</h2>
+<p>在<strong>一台干净 Windows Server</strong>（或新虚拟机）上端到端走一遍：</p>
+<ol>
+  <li><code>check-prereqs.ps1</code> → 全部通过。</li>
+  <li>安装完成后 <code>Get-Service QMS</code> = Running，<strong>重启机器后仍 Running</strong>。</li>
+  <li><code>health-check.ps1</code> 返回 <code>UP</code>。</li>
+  <li>浏览器访问 <code>https://&lt;主机&gt;/</code> 正常打开（证书受信，或已安装 CA）。</li>
+  <li>管理员登录 → 建一张投诉 → 上传附件 → 走 D2 → <strong>导出 Word 与 PDF 均成功</strong>（验证中文字体前提）。</li>
+  <li><strong>另一台电脑</strong>用浏览器访问同一地址成功（验证"给其他用户使用"）。</li>
+  <li>演练一次 <code>upgrade-qms.ps1</code> 与 <code>backup-qms.ps1</code>。</li>
+</ol>
+
+<h2>12. 待确认项（需拍板）</h2>
+<table>
+  <tr><th style="width:6%">编号</th><th style="width:30%">事项</th><th>建议</th></tr>
+  <tr><td>1</td><td>TLS 证书来源</td><td>公司 CA 签发的服务器证书（推荐）；试运行可先用自签</td></tr>
+  <tr><td>2</td><td>数据库由谁建库 / 授权</td><td>提供 SQL 脚本由 DBA 执行（贴合分离部署）</td></tr>
+  <tr><td>3</td><td>杀毒</td><td>接 <strong>ClamAV</strong>（已有可插拔适配器）或接受不扫描的残余风险</td></tr>
+  <tr><td>4</td><td>邮件</td><td>接<strong>公司 SMTP 中继</strong>（报告真发信）或继续记录日志不真发</td></tr>
+  <tr><td>5</td><td>首次登录强制改密</td><td>建议<strong>二期</strong>；本期用安装方设定的强口令 + 口令重置工具兜住</td></tr>
+  <tr><td>6</td><td>数据库连接是否加密</td><td>视公司要求决定是否启用 <code>sslmode=require</code></td></tr>
+</table>
+
+<h2>13. 明确不在本期</h2>
+<ul>
+  <li>多应用实例 / 负载均衡（需共享附件存储，一期单实例）</li>
+  <li>SSO / OAuth2 对接（认证提供方仍为空实现）</li>
+  <li>高保真 Office 服务器端转换（需服务器安装 LibreOffice，本机未装）</li>
+  <li>自动化 CI/CD 与镜像化发布（本期走离线包 + 脚本）</li>
+</ul>
+
+<h2>14. 实施进展</h2>
+
+<h3>阶段 A：应用侧改造 —— <span class="done">已完成（2026-10-16）</span></h3>
+<table>
+  <tr><th style="width:46%">文件</th><th>改动</th></tr>
+  <tr><td><code>backend/src/main/resources/application.yml</code></td><td>JWT 密钥去掉默认值，改为必填</td></tr>
+  <tr><td><code>backend/src/main/resources/logback-spring.xml</code></td><td><strong>新增</strong>：日志按天 + 按大小滚动，错误日志分离</td></tr>
+  <tr><td><code>backend/src/main/java/.../auth/AdminPasswordCli.java</code></td><td><strong>新增</strong>：管理员口令 CLI</td></tr>
+  <tr><td><code>backend/src/main/java/.../auth/mapper/AuthMapper.java</code></td><td>新增 <code>clearLock</code>（重置换口令时清锁定，不伪造登录时间）</td></tr>
+  <tr><td><code>deploy/templates/application-prod.yml.template</code></td><td><strong>新增</strong>：生产配置模板</td></tr>
+  <tr><td><code>config/.env.example</code></td><td>修正 SMTP 变量名（原写的与代码实际读取的不一致）</td></tr>
+</table>
+<p><strong>实测结果</strong>：</p>
+<ul>
+  <li>口令 CLI 四条路径退出码正确（成功 / 缺环境变量 / 未知用户 / 口令过短）；改密后<strong>新口令登录成功、旧口令被拒</strong>。</li>
+  <li>JWT 密钥缺失时<strong>启动即失败</strong>并给出明确错误，不再静默使用开发密钥。</li>
+  <li>prod profile + 外部配置 + 自签证书 → <strong>8443 HTTPS 启动成功</strong>，健康检查返回 200。</li>
+  <li>日志轮转文件正常落盘。</li>
+  <li>回归测试 <code>verify-auth</code> <strong>21/21 通过</strong>。</li>
+</ul>
+
+<h3>阶段 B / C / D —— <span class="todo">待实施</span></h3>
+<ul>
+  <li><strong>阶段 B</strong>：部署脚本 + WinSW 配置 + <code>db-init.sql</code></li>
+  <li><strong>阶段 C</strong>：文档 + 离线包打包脚本</li>
+  <li><strong>阶段 D</strong>：干净环境端到端验收</li>
+</ul>
+
+</body>
+</html>

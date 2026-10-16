@@ -13,5 +13,6 @@ public record MeResponse(
         String deptL2,
         String jobTitle,
         List<String> roles,
-        List<String> permissions) {
+        List<String> permissions,
+        boolean mustChangePwd) {
 }

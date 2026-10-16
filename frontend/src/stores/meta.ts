@@ -111,9 +111,25 @@ export const useMetaStore = defineStore('meta', {
       }
     },
 
-    /** Resets the cache, e.g. after a permission or master-data change. */
+    /**
+     * Drops the cache. Both flags have to go: ensureLoaded() bails out while
+     * `loading` is true, so clearing only `loaded` would make the re-read that
+     * follows a master-data change silently do nothing and leave stale data in
+     * every dropdown.
+     */
     reset() {
       this.loaded = false
+      this.loading = false
+    },
+
+    /**
+     * Re-reads every dictionary. Called after a master-data edit so the pickers,
+     * the knowledge-centre sidebar and the failure-type cascade all show the new
+     * values without a reload.
+     */
+    async refresh() {
+      this.reset()
+      await this.ensureLoaded()
     }
   }
 })

@@ -1,5 +1,9 @@
 package com.nexperia.qms.common.exception;
 
+import com.nexperia.qms.common.audit.AuditActions;
+import com.nexperia.qms.common.audit.AuditLogService;
+import com.nexperia.qms.common.security.CurrentUserContext;
+import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -16,6 +20,8 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.util.LinkedHashMap;
@@ -31,6 +37,12 @@ public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
+    private final AuditLogService auditLogService;
+
+    public GlobalExceptionHandler(AuditLogService auditLogService) {
+        this.auditLogService = auditLogService;
+    }
+
     @ExceptionHandler({BadCredentialsException.class, LockedException.class, DisabledException.class})
     public ResponseEntity<Map<String, Object>> handleAuthFailure(RuntimeException ex) {
         return body(HttpStatus.UNAUTHORIZED, ex.getMessage());
@@ -45,7 +57,35 @@ public class GlobalExceptionHandler {
         if (message == null || message.isBlank() || "Access Denied".equals(message)) {
             message = "无权限执行该操作";
         }
+        auditDenied(message);
         return body(HttpStatus.FORBIDDEN, message);
+    }
+
+    /**
+     * Requirement 3.12 (PS-113 AC3): a refused action must leave an audit trail.
+     * Recorded in its own transaction -- the refusal has already failed the
+     * request, and nothing else is going to commit.
+     */
+    private void auditDenied(String message) {
+        String operator = CurrentUserContext.employeeId();
+        if (operator == null) {
+            // An anonymous request has nobody to attribute the refusal to; that is
+            // an authentication problem, answered with 401 elsewhere.
+            return;
+        }
+        HttpServletRequest request = currentRequest();
+        String target = request == null
+                ? "(unknown)"
+                : request.getMethod() + " " + request.getRequestURI();
+        auditLogService.recordRegardlessOfOutcome(AuditActions.ACCESS_DENIED, "AccessDenied", null,
+                "越权访问被拦截：" + target + "；" + message);
+    }
+
+    private static HttpServletRequest currentRequest() {
+        var attributes = RequestContextHolder.getRequestAttributes();
+        return attributes instanceof ServletRequestAttributes servletAttributes
+                ? servletAttributes.getRequest()
+                : null;
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

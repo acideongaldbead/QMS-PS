@@ -22,6 +22,12 @@ async function submit() {
   loading.value = true
   try {
     await auth.login(form.username, form.password)
+    // A forced password change wins over wherever they were heading: the server
+    // refuses everything else until it is done.
+    if (auth.mustChangePwd) {
+      router.push({ name: 'changePassword' })
+      return
+    }
     const redirect = (route.query.redirect as string) || '/'
     router.push(redirect)
   } catch (e) {

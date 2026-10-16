@@ -33,7 +33,10 @@ const ICONS: Record<string, string> = {
   check: '<path d="M5 13l4 4L19 7"/>',
   send: '<path d="M21 3 3 10.5l7 2.5 2.5 7z"/><path d="M21 3 10 14"/>',
   upload: '<path d="M12 16V4"/><path d="M8 8l4-4 4 4"/><path d="M5 20h14"/>',
-  arrowRightFromLine: '<path d="M4 4v16"/><path d="M8 12h12"/><path d="M16 8l4 4-4 4"/>'
+  arrowRightFromLine: '<path d="M4 4v16"/><path d="M8 12h12"/><path d="M16 8l4 4-4 4"/>',
+  // RBAC administration (requirement 3.12).
+  key: '<circle cx="8" cy="15" r="4"/><path d="M11 12 20 3"/><path d="M17 6l2 2"/><path d="M14.5 8.5 16 10"/>',
+  lock: '<rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>'
 }
 
 const props = defineProps<{ name: string; size?: number }>()

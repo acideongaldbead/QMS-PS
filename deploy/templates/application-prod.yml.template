@@ -1,0 +1,91 @@
+# QMS production configuration.
+#
+# install-qms.ps1 renders this template into <install>\config\application-prod.yml
+# by replacing every @@TOKEN@@. The rendered file holds a database password, the
+# JWT signing key and the certificate password -- it is a secret file. Restrict
+# it to the service account and Administrators, and keep it out of backups that
+# leave the site in the clear.
+#
+# The application loads it with:
+#   --spring.profiles.active=prod
+#   --spring.config.additional-location=file:<install>\config\
+#
+# Because it is a *profile-specific* file it overrides the defaults baked into
+# the jar's application.yml (and the jar's application-local.yml is not loaded at
+# all in this profile, so the development datasource and the seed password cannot
+# leak into production).
+
+server:
+  port: @@HTTPS_PORT@@
+  # Let in-flight requests finish before the process goes away.
+  shutdown: graceful
+  ssl:
+    enabled: true
+    key-store: @@CERT_PATH@@
+    key-store-type: PKCS12
+    key-store-password: @@CERT_PASSWORD@@
+    key-alias: @@CERT_ALIAS@@
+    enabled-protocols: TLSv1.2,TLSv1.3
+  servlet:
+    encoding:
+      charset: UTF-8
+      force: true
+
+spring:
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+  datasource:
+    url: jdbc:postgresql://@@DB_HOST@@:@@DB_PORT@@/@@DB_NAME@@@@DB_SSL_PARAM@@
+    username: @@DB_USER@@
+    password: @@DB_PASSWORD@@
+    hikari:
+      maximum-pool-size: @@DB_POOL_MAX@@
+      minimum-idle: 2
+      connection-timeout: 10000
+      # "search_path" must stay: the tables live in the qms schema, not public.
+      connection-init-sql: SET search_path TO qms, public
+# Uncomment the whole spring.mail block when QMS_MAIL_PROVIDER below is `smtp`.
+#  mail:
+#    host: @@SMTP_HOST@@
+#    port: @@SMTP_PORT@@
+#    username: @@SMTP_USER@@
+#    password: @@SMTP_PASSWORD@@
+#    properties:
+#      mail:
+#        smtp:
+#          auth: true
+#          starttls:
+#            enable: true
+
+logging:
+  level:
+    com.nexperia.qms: INFO
+    org.springframework.security: INFO
+
+qms:
+  jwt:
+    # The key is mandatory (the jar carries no default), so this line is what
+    # makes production work. At least 32 bytes of random data.
+    secret: @@JWT_SECRET@@
+  storage:
+    # Absolute path. Never leave this relative: the service's working directory
+    # is the install root, and a relative path would silently follow it.
+    root: @@STORAGE_ROOT@@
+  mail:
+    # noop: the 8D "send" writes the communication log without a relay.
+    # smtp: really sends, and needs the spring.mail block above.
+    provider: @@MAIL_PROVIDER@@
+    from-address: @@MAIL_FROM@@
+  antivirus:
+    # noop: uploads are accepted unscanned (a known residual risk).
+    # clamav: scans through clamd at the host/port below.
+    provider: @@ANTIVIRUS_PROVIDER@@
+    clamav:
+      host: @@CLAMAV_HOST@@
+      port: @@CLAMAV_PORT@@
+  report:
+    # The 8D PDF embeds a Chinese font; PDF's built-in fonts cannot draw Chinese.
+    # Empty means "try C:/Windows/Fonts/{simhei,msyh,Deng}.ttf" -- set this when
+    # the server image does not ship those fonts (an English-only install often
+    # does not), otherwise PDF export fails outright.
+    pdf-font: @@PDF_FONT@@

@@ -76,8 +76,12 @@ qms:
       PRIORITY_001: 14
     fallback-target-days: 14
   jwt:
-    # Override in production. Must be at least 32 bytes for HS256.
-    secret: ${QMS_JWT_SECRET:local-dev-only-secret-change-me-in-production-0123456789}
+    # No default on purpose: a start with the key missing must fail loudly rather
+    # than silently sign tokens with a well-known development secret. Every
+    # environment sets QMS_JWT_SECRET (dev: config\.env; prod: the external
+    # application-prod.yml). Must be at least 32 bytes for HS256 -- JwtService
+    # enforces the length, this makes the value itself mandatory.
+    secret: ${QMS_JWT_SECRET}
     access-token-minutes: 30
     refresh-token-hours: 8
   auth:
@@ -87,6 +91,12 @@ qms:
     lockout:
       max-failed-attempts: 5
       lock-minutes: 15
+    # How long a resolved authorization state (roles, permissions, account flags)
+    # may be reused before it is read from the database again. This is only a
+    # backstop: the administration screens drop the affected entries the moment a
+    # change commits, which is what makes a permission change take effect on an
+    # already-open session (requirement 3.12, PS-111 AC3).
+    permission-cache-seconds: 60
   storage:
     root: ${QMS_STORAGE_ROOT:./data/attachments}
   upload:

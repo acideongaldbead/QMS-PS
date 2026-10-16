@@ -61,6 +61,13 @@ const routes: RouteRecordRaw[] = [
         name: 'admin',
         component: () => import('@/views/AdminView.vue'),
         meta: { permission: 'admin.all' }
+      },
+      {
+        // Not in the sidebar: reachable only when the server says a password
+        // change is due, or deliberately by someone changing their own.
+        path: 'change-password',
+        name: 'changePassword',
+        component: () => import('@/views/ChangePasswordView.vue')
       }
     ]
   },
@@ -82,6 +89,13 @@ router.beforeEach(async (to) => {
 
   if (!auth.isAuthenticated) {
     return { name: 'login', query: { redirect: to.fullPath } }
+  }
+
+  // A forced password change confines the session to the change screen: the
+  // server answers 403 everywhere else, so sending them anywhere else would only
+  // produce failing requests.
+  if (auth.mustChangePwd && to.name !== 'changePassword') {
+    return { name: 'changePassword' }
   }
 
   const permission = to.meta.permission as string | undefined
